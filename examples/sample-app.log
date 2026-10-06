@@ -1,0 +1,16 @@
+2026-10-01 10:30:25.123  INFO 12345 --- [           main] com.example.app.Application            : Started Application in 1.234 seconds
+2026-10-01 10:30:25.456  DEBUG 12345 --- [           main] com.example.app.config.ConfigLoader    : Loaded 12 configuration properties
+2026-10-01 10:30:30.001  WARN 12345 --- [ntContainer#0] com.example.app.payment.PaymentService : Slow payment provider response (took 3.1s)
+2026-10-01 10:30:32.500 ERROR 12345 --- [io-8080-exec-1] com.example.app.payment.PaymentService : Payment processing failed
+java.lang.IllegalStateException: Invalid payment state
+    at com.example.app.payment.PaymentService.process(PaymentService.java:143)
+    at com.example.app.payment.PaymentController.pay(PaymentController.java:72)
+2026-10-01 10:30:32.789  INFO 12345 --- [io-8080-exec-1] com.example.app.payment.PaymentService : Retrying payment (attempt 1)
+2026-10-01 10:30:33.100 DEBUG 8899 --- [scheduling-1] com.example.app.support.Scheduler        : Purged 12 expired sessions
+2026-10-01 10:30:35.234  INFO 12345 --- [           main] com.example.app.app.App                : Stopping application
+2026-10-01 10:30:36.111  FATAL 12345 --- [           main] com.example.app.app.App                : Unrecoverable error
+java.lang.OutOfMemoryError: Java heap space
+        at java.base/java.lang.StringBuilder.ensureCapacity(StringBuilder.java:175)
+        at java.base/java.lang.StringBuilder.append(StringBuilder.java:215)
+WARN  custom old-style log line
+this is just plain text with no level

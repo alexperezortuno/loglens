@@ -1,165 +1,126 @@
 # LogLens
 
-LogLens is a Java-based application built with Spring Boot that provides log analysis and visualization capabilities. The project follows modern Java development practices with a layered architecture and comprehensive testing.
+LogLens is an IntelliJ IDEA plugin that brings a dedicated log viewer into the IDE.
 
-## Features
+Open `.log`, `.out` and `.txt` files in a dedicated tool window with level filtering, plain-text and regex search. No network access, no external services — the whole experience is local-first.
 
-- Log analysis and visualization
-- RESTful API for log management
-- Modular architecture with clear separation of concerns
-- Comprehensive test coverage with JUnit and Mockito
-- Spring Boot integration with dependency injection
-- Support for database migrations (Flyway/Liquibase)
+The technical specification lives in [SPEC.md](SPEC.md) and the iteration plan in [ROADMAP.md](ROADMAP.md). The current source tree implements the **0.1 MVP** described in those documents.
+
+## Features (0.1 MVP)
+
+- Dedicated **LogLens tool window** anchored to the bottom of the IDE.
+- **Open Log File…** action that loads `.log`, `.out`, `.txt` files into the viewer.
+- **Buffered file reading** to keep large files responsive.
+- Parsing pipeline built around a small `LogParser` interface with a `ParserRegistry`:
+  - `SpringBootLogParser` — Spring Boot / Logback default pattern (timestamp, level, thread, logger).
+  - `PlainTextLogParser` — fallback for arbitrary text files with optional level detection.
+- `LogEntry`, `LogLevel` and `ThrowableInfo` domain types shared by every parser.
+- **Level filter** toggles for `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR`, `FATAL` (UNKNOWN lines are always shown).
+- **Search** with plain text, case-sensitive option, and **regular expression** mode; composable with the level filter.
+- **Stack-trace header detection** (used by 0.2 navigation — see ROADMAP).
+- **Persistent preferences** (filter state, search options) via `LogLensSettings`.
+- Graceful handling of malformed lines; raw text is always preserved.
+- Unit tests for parsers, level filter, search and file reading.
 
 ## Tech Stack
 
-- **Language**: Java 11+
-- **Framework**: Spring Boot
-- **Build System**: Gradle
-- **Testing**: JUnit 5, Mockito
-- **Database**: H2 (for testing), PostgreSQL (for production)
-- **ORM**: JPA/Hibernate
-- **Code Quality**: Spotless for code formatting
-- **Documentation**: Javadoc, OpenAPI/Swagger
+- **Language:** Kotlin 2.0.21 (JVM 21 toolchain).
+- **Platform:** IntelliJ Platform 2024.3 (`com.jetbrains.intellij.platform` Gradle plugin v2.3.0).
+- **Build:** Gradle 9.5.1 with Kotlin DSL (`build.gradle.kts`).
+- **Testing:** JUnit 5 + `kotlin.test`.
 
 ## Requirements
 
-- Java 11 or higher
-- Gradle 6.0 or higher
-- Git
+- JDK 21
+- Gradle 8.10 or newer (the project also works with the bundled wrapper `./gradlew`).
 
 ## Installation
 
-1. Clone the repository:
-   ```bash
-   git clone <repository-url>
-   cd loglens
-   ```
+Clone the repository and build the plugin locally:
 
-2. Build the project:
-   ```bash
-   ./gradlew build
-   ```
+```bash
+git clone <repository-url>
+cd loglens
+./gradlew build
+```
 
-3. Run the application:
-   ```bash
-   ./gradlew bootRun
-   ```
+The resulting distribution ZIP is written to `build/distributions/`. Install it in IntelliJ IDEA via **Settings → Plugins → Install Plugin from Disk…** and choose the ZIP.
 
-## Configuration
+## Running
 
-The application uses Spring Boot's configuration management. Configuration properties can be set in:
-- `application.properties` or `application.yml` files
-- Environment variables
-- Command line arguments
+After the plugin is installed and the IDE restarted, open any `.log`, `.out` or `.txt` file via **File → Open Log File…**. The LogLens tool window appears at the bottom of the IDE, showing the parsed entries. Use the level toggles and the search box to narrow the view.
 
-## Usage
-
-After starting the application, you can access:
-- REST API endpoints at `http://localhost:8080`
-- Swagger UI at `http://localhost:8080/swagger-ui.html` (if enabled)
+To open the tool window without a file, use the **Window → LogLens** menu entry.
 
 ## Development
 
-### Building the Project
-
 ```bash
-# Clean and build
-./gradlew clean build
+# Compile main + test sources.
+./gradlew compileKotlin compileTestKotlin
 
-# Run tests
+# Run unit tests.
 ./gradlew test
 
-# Run specific test class
-./gradlew test --tests "ClassNameTest"
+# Build the plugin distribution.
+./gradlew build
 
-# Run specific test method
-./gradlew test --tests "ClassNameTest.testMethodName"
-
-# Generate coverage report
-./gradlew test jacocoTestReport
+# Run the sandboxed IDE with the plugin loaded for manual smoke testing.
+./gradlew runIde
 ```
 
-### Code Quality
-
-```bash
-# Run all checks
-./gradlew check
-
-# Run linting
-./gradlew spotlessCheck
-```
-
-## Testing
-
-The project uses JUnit 5 for unit testing and Mockito for mocking. Tests are organized in the standard Maven/Gradle structure under `src/test/java`.
-
-## Project Structure
+### Project layout
 
 ```
-loglens/
-├── build.gradle
-├── settings.gradle
-├── gradle.properties
-├── src/
-│   ├── main/
-│   │   └── java/
-│   │       └── com/loglens/
-│   └── test/
-│       └── java/
-└── .idea/ (IDE configuration)
+src/
+├── main/
+│   ├── kotlin/io/loglens/
+│   │   ├── exception/   # StackTraceDetector (used in 0.2 navigation)
+│   │   ├── filter/      # LevelFilter
+│   │   ├── icons/       # Plugin icon loader
+│   │   ├── model/       # LogEntry, LogLevel, ThrowableInfo, StackFrame
+│   │   ├── parser/      # LogParser + SpringBootLogParser + PlainTextLogParser + ParserRegistry
+│   │   ├── search/      # LogSearch (plain / regex)
+│   │   ├── service/     # LogLensProjectService, FileReadingService
+│   │   ├── settings/    # PersistentStateComponent + Settings Configurable
+│   │   ├── ui/          # Tool Window factory, toolbar, viewer
+│   │   └── util/        # RawText helpers (searchable text, summary)
+│   └── resources/
+│       ├── META-INF/plugin.xml
+│       └── icons/loglens.svg
+└── test/
+    ├── kotlin/io/loglens/   # JUnit 5 + kotlin.test specs
+    └── resources/
 ```
+
+The application logic stays parser-agnostic: every line of input is normalised into a `LogEntry` before the viewer, filter and search see it.
 
 ## Architecture
 
-LogLens follows a layered architecture pattern:
-- **Controller Layer**: REST endpoints and request handling
-- **Service Layer**: Business logic and application services
-- **Repository Layer**: Data access and persistence
-- **Model Layer**: Data models and entities
+LogLens uses a thin layered structure on top of the IntelliJ Platform:
 
-The architecture emphasizes:
-- Separation of concerns
-- Dependency injection via Spring
-- Use of interfaces for loose coupling
-- RESTful API design
+- **`LogParser`** — pure parsing abstraction. Implementations never touch UI code.
+- **`ParserRegistry`** — selects the right `LogParser` per file and keeps parser affinity so a single file is not flipped between formats mid-stream.
+- **`LogLensProjectService`** — project-scoped state holder that owns the most recently opened log and broadcasts snapshots to listeners.
+- **`LogViewerPanel`** + **`LogViewerToolbar`** — Swing UI components inside the Tool Window. They consume `LogEntry`s, a `LevelFilter` and a `LogSearch` and never know which parser produced them.
+- **`LogLensSettings`** — `PersistentStateComponent` storing the user's filter/search preferences across IDE restarts.
 
-## Environment Variables
+This honours SPEC §13: features depend on abstractions (parser interface, snapshot model) rather than concrete implementations.
 
-The application can be configured using environment variables. Common configuration options include:
-- `SERVER_PORT`: Port number for the application
-- `SPRING_DATASOURCE_URL`: Database connection URL
-- `SPRING_DATASOURCE_USERNAME`: Database username
-- `SPRING_DATASOURCE_PASSWORD`: Database password
+## Security & Privacy
 
-## API Documentation
+Per SPEC §12:
 
-API documentation is available through Swagger/OpenAPI. The documentation can be accessed at:
-- `http://localhost:8080/swagger-ui.html` (if enabled)
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Build Failures**: Ensure you have Java 11+ and Gradle installed
-2. **Port Conflicts**: Change `server.port` in application properties if port 8080 is in use
-3. **Database Connection**: Verify database configuration in application properties
-
-### Running Tests
-
-To run tests with coverage:
-```bash
-./gradlew test jacocoTestReport
-```
+- Logs never leave the IDE.
+- No network calls, no API keys, no accounts.
+- No telemetry.
 
 ## Contributing
 
-1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
+1. Fork the repository.
+2. Create a feature branch.
+3. `./gradlew test` must pass before submitting a PR.
+4. Submit a Pull Request targeting the appropriate milestone in `ROADMAP.md`.
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+MIT — see `LICENSE`.

@@ -21,6 +21,8 @@ data class LogEntry(
     /** One-based line number in the originating file, if known. */
     val lineNumber: Int? = null,
     val throwable: ThrowableInfo? = null,
+    /** Additional structured fields, such as JSON log attributes. */
+    val metadata: Map<String, String> = emptyMap(),
 ) {
     /** Convenience accessor returning a stable identifier — used for selection. */
     fun identity(): String = "${lineNumber ?: 0}#${raw.hashCode()}"

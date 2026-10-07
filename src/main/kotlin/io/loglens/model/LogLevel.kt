@@ -43,13 +43,7 @@ enum class LogLevel {
             }
         }
 
-        /**
-         * All levels that the UI should expose as filter toggles.
-         *
-         * [UNKNOWN] is intentionally excluded — it represents a malformed
-         * line that the parser could not classify and there is no meaningful
-         * way for the user to enable or disable it.
-         */
-        val FILTERABLE: List<LogLevel> = listOf(TRACE, DEBUG, INFO, WARN, ERROR, FATAL)
+        /** All levels exposed as viewer filter toggles. */
+        val FILTERABLE: List<LogLevel> = listOf(TRACE, DEBUG, INFO, WARN, ERROR, FATAL, UNKNOWN)
     }
 }

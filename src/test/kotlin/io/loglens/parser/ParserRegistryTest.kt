@@ -36,6 +36,19 @@ class ParserRegistryTest {
     }
 
     @Test
+    fun `registry strips ANSI formatting for parsing and display but preserves raw line`() {
+        val registry = ParserRegistry.defaults()
+        val raw = "\u001B[34m0.00.083.395\u001B[0m \u001B[32mINFO\u001B[0m hello"
+
+        val entry = registry.parse(raw, lineNumber = 1)
+
+        assertEquals(LogLevel.INFO, entry.level)
+        assertEquals("0.00.083.395 hello", entry.message)
+        assertEquals(raw, entry.raw)
+        assertEquals(1, entry.lineNumber)
+    }
+
+    @Test
     fun `registry keeps parser affinity within a file`() {
         val registry = ParserRegistry.defaults()
         val spring = "2026-10-01 10:30:25  INFO 1 --- [main] c.e.App : hi"

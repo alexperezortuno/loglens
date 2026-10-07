@@ -23,8 +23,10 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import javax.swing.BorderFactory
+import javax.swing.JButton
 import javax.swing.DefaultListModel
 import javax.swing.JList
+import javax.swing.JLabel
 import javax.swing.JPanel
 import javax.swing.JTabbedPane
 import javax.swing.JTextArea
@@ -38,8 +40,8 @@ import javax.swing.UIManager
  *  - the active [LevelFilter] / [LogSearch],
  *  - the feed list and its detail view.
  *
- * Updates are synchronous — the 0.1 MVP is sized for files that load in well
- * under a second. SPEC §9 will move this to a bounded, backgrounded pipeline.
+ * File reading and parsing happen in bounded background pages; only the
+ * retained page window is copied into this Swing model.
  */
 class LogViewerPanel {
 
@@ -80,7 +82,23 @@ class LogViewerPanel {
         isContinuousLayout = true
         border = BorderFactory.createEmptyBorder()
     }
+    private val loadStatus = JLabel("Open a log file")
+    private var loadMoreAction: (() -> Unit)? = null
+    private var cancelLoadAction: (() -> Unit)? = null
+    private var lastSnapshot: LogLensSnapshot = LogLensSnapshot.empty()
+    private val loadMoreButton = JButton("Load more").apply {
+        isEnabled = false
+        addActionListener {
+            if (lastSnapshot.isLoading) cancelLoadAction?.invoke() else loadMoreAction?.invoke()
+        }
+    }
+    private val loadControls = JPanel(BorderLayout(8, 0)).apply {
+        border = BorderFactory.createEmptyBorder(6, 10, 6, 10)
+        add(loadStatus, BorderLayout.CENTER)
+        add(loadMoreButton, BorderLayout.EAST)
+    }
     val component: JBPanel<JBPanel<*>> = JBPanel<JBPanel<*>>(BorderLayout()).apply {
+        add(loadControls, BorderLayout.NORTH)
         add(splitPane, BorderLayout.CENTER)
     }
 
@@ -89,8 +107,20 @@ class LogViewerPanel {
     private var search: LogSearch = LogSearch.EMPTY
 
     fun update(snapshot: LogLensSnapshot) {
+        lastSnapshot = snapshot
         source = snapshot.entries
+        updateLoadStatus(snapshot)
         refresh()
+    }
+
+    fun setLoadMoreAction(action: (() -> Unit)?) {
+        loadMoreAction = action
+        updateLoadStatus(lastSnapshot)
+    }
+
+    fun setCancelLoadAction(action: (() -> Unit)?) {
+        cancelLoadAction = action
+        updateLoadStatus(lastSnapshot)
     }
 
     fun updateFilter(filter: LevelFilter) {
@@ -111,7 +141,7 @@ class LogViewerPanel {
             .filter { filter.isAllowed(it) }
             .filter { search.matches(it) }
             .toList()
-        visibleEntries.forEach { listModel.addElement(it) }
+        listModel.addAll(visibleEntries)
 
         val selectedIndex = visibleEntries.indexOfFirst { it.identity() == selectedIdentity }
         if (visibleEntries.isNotEmpty()) {
@@ -134,7 +164,11 @@ class LogViewerPanel {
             return
         }
         detailTitle.text = listOfNotNull(entry.timestamp, entry.level.display()).joinToString("    ·    ")
-        detailContext.text = metadataSummary(entry).ifBlank { entry.logger ?: " " }
+        val context = metadataSummary(entry).ifBlank { entry.logger.orEmpty() }
+        detailContext.text = listOfNotNull(
+            context.takeIf { it.isNotBlank() },
+            "Record preview truncated at the 1 MiB limit".takeIf { entry.isTruncated },
+        ).joinToString("    ·    ").ifBlank { " " }
         messageArea.text = entry.message
         messageArea.caretPosition = 0
         rawArea.text = prettyRaw(entry.raw)
@@ -179,6 +213,31 @@ class LogViewerPanel {
         border = BorderFactory.createEmptyBorder(10, 10, 10, 10)
         background = UIManager.getColor("Panel.background") ?: JBColor.background()
         foreground = JBColor.foreground()
+    }
+
+    private fun updateLoadStatus(snapshot: LogLensSnapshot) {
+        val total = snapshot.totalBytes?.let { " of ${formatBytes(it)}" }.orEmpty()
+        val progress = "first ${snapshot.entries.size} records · ${formatBytes(snapshot.bytesRead)}$total"
+        loadStatus.text = buildList {
+            add(when {
+                snapshot.isLoading && snapshot.entries.isEmpty() -> "Loading log…"
+                snapshot.isLoading -> "Loading more…  $progress"
+                else -> "Showing the $progress"
+            })
+            snapshot.statusMessage?.let(::add)
+        }.joinToString("    ·    ")
+        loadMoreButton.text = if (snapshot.isLoading) "Cancel" else "Load more"
+        loadMoreButton.isEnabled = if (snapshot.isLoading) {
+            cancelLoadAction != null
+        } else {
+            loadMoreAction != null && snapshot.canLoadMore
+        }
+    }
+
+    private fun formatBytes(bytes: Long): String = when {
+        bytes >= 1024L * 1024 -> "%.1f MiB".format(bytes / (1024.0 * 1024))
+        bytes >= 1024 -> "%.0f KiB".format(bytes / 1024.0)
+        else -> "$bytes B"
     }
 
     private inner class LogEntryCardRenderer : JPanel(BorderLayout(0, 4)), ListCellRenderer<LogEntry> {
@@ -294,7 +353,7 @@ class LogViewerPanel {
     }
 
     private companion object {
-        const val CARD_HEIGHT = 39
+        const val CARD_HEIGHT = 54
         val TIME_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("MMM d · HH:mm:ss", Locale.getDefault())
         val DISPLAYED_METADATA_KEYS = setOf("app", "module", "function", "sourceLine")
     }

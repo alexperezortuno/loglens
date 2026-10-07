@@ -294,7 +294,7 @@ class LogViewerPanel {
     }
 
     private companion object {
-        const val CARD_HEIGHT = 62
+        const val CARD_HEIGHT = 39
         val TIME_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("MMM d · HH:mm:ss", Locale.getDefault())
         val DISPLAYED_METADATA_KEYS = setOf("app", "module", "function", "sourceLine")
     }

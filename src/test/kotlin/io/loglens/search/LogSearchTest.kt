@@ -65,4 +65,19 @@ class LogSearchTest {
             ),
         )
     }
+
+    @Test
+    fun `search matches decoded structured metadata`() {
+        val meetingEntry = LogEntry(
+            timestamp = "2026-01-05T14:57:47",
+            level = LogLevel.INFO,
+            message = "Recording started",
+            raw = "{\"level\":\"info\"}",
+            metadata = mapOf("app" to "meeting-cli", "function" to "record_audio", "sourceLine" to "128"),
+        )
+
+        assertTrue(LogSearch(query = "meeting-cli").matches(meetingEntry))
+        assertTrue(LogSearch(query = "record_audio").matches(meetingEntry))
+        assertTrue(LogSearch(query = "128").matches(meetingEntry))
+    }
 }

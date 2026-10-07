@@ -24,9 +24,20 @@ class LevelFilterTest {
     }
 
     @Test
-    fun `unknown level always passes`() {
-        val filter = LevelFilter(enabled = emptySet())
+    fun `unknown level can be toggled`() {
+        val filter = LevelFilter()
         assertTrue(filter.isAllowed(entry(LogLevel.UNKNOWN)))
+        filter.setEnabled(LogLevel.UNKNOWN, false)
+        assertFalse(filter.isAllowed(entry(LogLevel.UNKNOWN)))
+        filter.setEnabled(LogLevel.UNKNOWN, true)
+        assertTrue(filter.isAllowed(entry(LogLevel.UNKNOWN)))
+    }
+
+    @Test
+    fun `empty enabled set filters every level including unknown`() {
+        val filter = LevelFilter(enabled = emptySet())
+        assertFalse(filter.isAllowed(entry(LogLevel.UNKNOWN)))
+        assertFalse(filter.isAllowed(entry(LogLevel.INFO)))
     }
 
     @Test
@@ -70,5 +81,6 @@ class LevelFilterTest {
         assertFalse(filter.isAllowed(entry(LogLevel.INFO)))
         assertTrue(filter.isAllowed(entry(LogLevel.ERROR)))
         assertTrue(filter.isAllowed(entry(LogLevel.FATAL)))
+        assertFalse(filter.isAllowed(entry(LogLevel.UNKNOWN)))
     }
 }

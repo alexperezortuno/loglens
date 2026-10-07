@@ -36,6 +36,7 @@ class LogLensSettings : PersistentStateComponent<LogLensSettings.State> {
         var enabledError: Boolean = true,
         var enabledFatal: Boolean = true,
         var lastQuery: String = "",
+        var enabledUnknown: Boolean = true,
     )
 
     companion object {

@@ -9,7 +9,9 @@ The technical specification lives in [SPEC.md](SPEC.md) and the iteration plan i
 ## Features (0.1 MVP)
 
 - Dedicated **LogLens tool window** anchored to the bottom of the IDE.
+- Opens `.log` and `.out` files directly in an ANSI-aware LogLens file editor.
 - **Open Log File…** action that loads `.log`, `.out`, `.txt` files into the viewer.
+- ANSI SGR foreground/background colors, bold, italic and underline rendering in the viewer.
 - **Buffered file reading** to keep large files responsive.
 - Parsing pipeline built around a small `LogParser` interface with a `ParserRegistry`:
   - `SpringBootLogParser` — Spring Boot / Logback default pattern (timestamp, level, thread, logger).
@@ -48,7 +50,7 @@ The resulting distribution ZIP is written to `build/distributions/`. Install it 
 
 ## Running
 
-After the plugin is installed and the IDE restarted, open any `.log`, `.out` or `.txt` file via **File → Open Log File…**. The LogLens tool window appears at the bottom of the IDE, showing the parsed entries. Use the level toggles and the search box to narrow the view.
+After the plugin is installed and the IDE restarted, open `.log` and `.out` files normally; LogLens will show them with ANSI colors and styles. For `.txt` files, use **File → Open Log File…** or choose **Open in LogLens** from the editor's context menu. Use the level toggles and search box to narrow the view.
 
 To open the tool window without a file, use the **Window → LogLens** menu entry.
 

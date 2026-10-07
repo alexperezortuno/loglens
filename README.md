@@ -13,7 +13,7 @@ The technical specification lives in [SPEC.md](SPEC.md) and the iteration plan i
 - **Open Log File…** action that loads `.log`, `.out`, `.txt` files into the viewer.
 - ANSI SGR foreground/background colors, bold, italic and underline rendering in the viewer.
 - Newline-delimited JSON parsing with structured metadata and a compact feed/detail layout.
-- **Buffered file reading** to keep large files responsive.
+- **Bounded background file loading** with a 10 MiB/10,000-record initial page, 4 MiB/5,000-record subsequent pages, a 20,000-entry/32 MiB retention cap, and a 1 MiB per-record limit.
 - Parsing pipeline built around a small `LogParser` interface with a `ParserRegistry`:
   - `SpringBootLogParser` — Spring Boot / Logback default pattern (timestamp, level, thread, logger).
   - `JsonLinesLogParser` — one JSON object per line, including structured app/module/function fields.
@@ -52,7 +52,7 @@ The resulting distribution ZIP is written to `build/distributions/`. Install it 
 
 ## Running
 
-After the plugin is installed and the IDE restarted, open `.log` and `.out` files normally; LogLens will show them in a compact feed with a selected-record detail pane. ANSI colors and JSON metadata are preserved. For `.txt` files, use **File → Open Log File…** or choose **Open in LogLens** from the editor's context menu. Use the level toggles and search box to narrow the view.
+After the plugin is installed and the IDE restarted, open `.log` and `.out` files normally; LogLens starts at the beginning and loads a bounded page in the background. Choose **Load more** to continue, or **Cancel** to stop the current read. Oversized records show a truncated preview while their remaining bytes are skipped in cancellable chunks. The viewer keeps a bounded in-memory record window and reports when its retention limit is reached. Search and filters apply to records currently loaded. ANSI colors and JSON metadata are preserved. For `.txt` files, use **File → Open Log File…** or choose **Open in LogLens** from the editor's context menu.
 
 To open the tool window without a file, use the **Window → LogLens** menu entry.
 

@@ -43,7 +43,7 @@ class LogViewerToolbar(
                         LogLevel.WARN -> it.state.enabledWarn
                         LogLevel.ERROR -> it.state.enabledError
                         LogLevel.FATAL -> it.state.enabledFatal
-                        LogLevel.UNKNOWN -> true
+                        LogLevel.UNKNOWN -> it.state.enabledUnknown
                     }
                 }
                 addActionListener { onFilterChanged() }
@@ -110,7 +110,7 @@ class LogViewerToolbar(
                 LogLevel.WARN -> settings.enabledWarn
                 LogLevel.ERROR -> settings.enabledError
                 LogLevel.FATAL -> settings.enabledFatal
-                LogLevel.UNKNOWN -> true
+                LogLevel.UNKNOWN -> settings.enabledUnknown
             }
         }
         viewer.updateFilter(currentFilterFromView())
@@ -130,7 +130,7 @@ class LogViewerToolbar(
                 LogLevel.WARN -> settings.enabledWarn = toggle.isSelected
                 LogLevel.ERROR -> settings.enabledError = toggle.isSelected
                 LogLevel.FATAL -> settings.enabledFatal = toggle.isSelected
-                LogLevel.UNKNOWN -> Unit
+                LogLevel.UNKNOWN -> settings.enabledUnknown = toggle.isSelected
             }
         }
         viewer.updateFilter(currentFilterFromView())
@@ -157,7 +157,7 @@ class LogViewerToolbar(
             .filter { it.value.isSelected }
             .map { it.key }
             .toSet()
-        return LevelFilter(if (enabled.isEmpty()) LevelFilter.DEFAULT_ENABLED else enabled)
+        return LevelFilter(enabled)
     }
 
     private fun currentSearchFromView(): LogSearch {

@@ -18,6 +18,15 @@ data class LogSearch(
     val mode: Mode = Mode.PLAIN,
     val caseSensitive: Boolean = false,
 ) {
+    private val compiledRegex: Regex? by lazy(LazyThreadSafetyMode.PUBLICATION) {
+        if (query.isEmpty() || mode != Mode.REGEX) {
+            null
+        } else {
+            val options = if (caseSensitive) emptySet() else setOf(RegexOption.IGNORE_CASE)
+            runCatching { Regex(query, options) }.getOrNull()
+        }
+    }
+
     enum class Mode { PLAIN, REGEX }
 
     /**
@@ -40,14 +49,7 @@ data class LogSearch(
             }
 
             Mode.REGEX -> {
-                val options = if (caseSensitive) {
-                    emptySet()
-                } else {
-                    setOf(RegexOption.IGNORE_CASE)
-                }
-                val compiled = runCatching { Regex(query, options) }.getOrNull()
-                    ?: return false
-                compiled.containsMatchIn(haystack)
+                compiledRegex?.containsMatchIn(haystack) ?: false
             }
         }
     }

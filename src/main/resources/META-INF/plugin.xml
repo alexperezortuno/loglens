@@ -24,8 +24,9 @@
         <h3>0.1.0 — Initial MVP</h3>
         <ul>
             <li>Dedicated tool window with TRACE/DEBUG/INFO/WARN/ERROR/FATAL filter toggles.</li>
-            <li>Plain-text and Spring Boot parser formats with timestamp, level, thread and logger detection.</li>
+            <li>Plain-text, Spring Boot and newline-delimited JSON log formats.</li>
             <li>ANSI SGR colors, backgrounds and text styles in the LogLens viewer.</li>
+            <li>Compact log feed with selected-record message and raw-record details.</li>
             <li>LogLens file editor for ordinary .log and .out file opens.</li>
             <li>Plain-text and case-sensitive search; optional regular expressions.</li>
             <li>Buffered file reader for .log, .out and .txt files.</li>

@@ -36,6 +36,20 @@ class ParserRegistryTest {
     }
 
     @Test
+    fun `registry routes JSON lines through the structured parser`() {
+        val registry = ParserRegistry.defaults()
+        val entry = registry.parse(
+            """{"timestamp":"2026-01-05T14:57:47","level":"info","message":"Recording saved","app":"meeting-cli"}""",
+            lineNumber = 4,
+        )
+
+        assertEquals(LogLevel.INFO, entry.level)
+        assertEquals("Recording saved", entry.message)
+        assertEquals("meeting-cli", entry.metadata["app"])
+        assertEquals(4, entry.lineNumber)
+    }
+
+    @Test
     fun `registry strips ANSI formatting for parsing and display but preserves raw line`() {
         val registry = ParserRegistry.defaults()
         val raw = "\u001B[34m0.00.083.395\u001B[0m \u001B[32mINFO\u001B[0m hello"

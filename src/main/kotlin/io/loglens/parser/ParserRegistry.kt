@@ -7,7 +7,7 @@ import io.loglens.util.AnsiCodes
  * Selects the appropriate [LogParser] for an input line.
  *
  * Registries should be constructed with the most specific parsers first
- * (e.g. `SpringBootLogParser` before `PlainTextLogParser`) so that format
+ * (e.g. structured JSON and Spring Boot parsers before `PlainTextLogParser`) so that format
  * detection is consistent across the file — once a parser "wins" the first
  * non-empty line, all subsequent lines are routed through the same parser.
  *
@@ -76,6 +76,7 @@ class ParserRegistry(
         /** Default registry with the spec's initial parsers. */
         fun defaults(): ParserRegistry = ParserRegistry(
             listOf(
+                JsonLinesLogParser(),
                 SpringBootLogParser(),
                 PlainTextLogParser(),
             ),

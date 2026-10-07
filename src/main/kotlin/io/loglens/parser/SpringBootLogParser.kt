@@ -17,8 +17,7 @@ import io.loglens.model.LogLevel
  *  - Detection is a single regex pass on the timestamp + level substring to
  *    keep the `supports` probe cheap.
  *  - Failure modes collapse to UNKNOWN while preserving `raw`.
- *  - A throwable header appearing on the same line (rare, but allowed) is
- *    surfaced via [StackTraceDetector.peek].
+ *  - A throwable header in the extracted message is surfaced via [StackTraceDetector.peek].
  */
 class SpringBootLogParser : LogParser {
 
@@ -55,7 +54,7 @@ class SpringBootLogParser : LogParser {
             message = message,
             raw = line,
             lineNumber = lineNumber,
-            throwable = StackTraceDetector.peek(line),
+            throwable = StackTraceDetector.peek(message),
         )
     }
 

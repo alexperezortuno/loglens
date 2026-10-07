@@ -1,6 +1,6 @@
 plugins {
-    kotlin("jvm") version "2.0.21"
-    id("org.jetbrains.intellij.platform") version "2.3.0"
+    kotlin("jvm") version "2.1.20"
+    id("org.jetbrains.intellij.platform") version "2.6.0"
 }
 
 group = providers.gradleProperty("pluginGroup").get()
@@ -21,7 +21,7 @@ dependencies {
 
     implementation(kotlin("stdlib-jdk8"))
 
-    testImplementation("org.jetbrains.kotlin:kotlin-test:2.0.21")
+    testImplementation("org.jetbrains.kotlin:kotlin-test-junit5:2.1.20")
     testImplementation("org.junit.jupiter:junit-jupiter:5.11.3")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.11.3")
 }

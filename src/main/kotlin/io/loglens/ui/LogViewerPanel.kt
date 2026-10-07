@@ -10,22 +10,29 @@ import com.google.gson.JsonParser
 import io.loglens.filter.LevelFilter
 import io.loglens.model.LogEntry
 import io.loglens.model.LogLevel
+import io.loglens.model.StackFrame
+import io.loglens.model.ThrowableInfo
 import io.loglens.search.LogSearch
 import io.loglens.service.LogLensProjectService.LogLensSnapshot
 import io.loglens.util.AnsiCodes
 import java.awt.BorderLayout
 import java.awt.Color
 import java.awt.Component
+import java.awt.Cursor
 import java.awt.FlowLayout
 import java.awt.Font
 import java.awt.GridLayout
+import java.awt.event.MouseAdapter
+import java.awt.event.MouseEvent
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import javax.swing.BorderFactory
 import javax.swing.JButton
+import javax.swing.DefaultListCellRenderer
 import javax.swing.DefaultListModel
 import javax.swing.JList
+import javax.swing.JComponent
 import javax.swing.JLabel
 import javax.swing.JPanel
 import javax.swing.JTabbedPane
@@ -33,6 +40,8 @@ import javax.swing.JTextArea
 import javax.swing.ListCellRenderer
 import javax.swing.ListSelectionModel
 import javax.swing.UIManager
+import com.intellij.openapi.ide.CopyPasteManager
+import java.awt.datatransfer.StringSelection
 
 /**
  * Compact record feed with a selected-record detail pane. The component owns:
@@ -62,9 +71,66 @@ class LogViewerPanel {
     }
     private val detailTitle = JBLabel("Select a record")
     private val detailContext = JBLabel(" ").apply { foreground = JBColor.GRAY }
+    private var selectedEntry: LogEntry? = null
+    private var stackFrameNavigationHandler: ((StackFrame, JComponent) -> Unit)? = null
+    private val exceptionSummary = JBLabel("No exception details")
+    private val frameModel = DefaultListModel<FrameRow>()
+    private val frameList: JList<FrameRow> = JBList(frameModel).apply {
+        cellRenderer = FrameRowRenderer()
+        visibleRowCount = 12
+        addMouseListener(object : MouseAdapter() {
+            override fun mouseClicked(event: MouseEvent) {
+                if (event.clickCount != 1) return
+                val index = locationToIndex(event.point)
+                if (index < 0 || !getCellBounds(index, index).contains(event.point)) return
+                frameModel.getElementAt(index).frame?.let { frame ->
+                    stackFrameNavigationHandler?.invoke(frame, this@apply)
+                }
+            }
+        })
+        addMouseMotionListener(object : MouseAdapter() {
+            override fun mouseMoved(event: MouseEvent) {
+                val index = locationToIndex(event.point)
+                val row = if (index >= 0 && getCellBounds(index, index).contains(event.point)) {
+                    frameModel.getElementAt(index)
+                } else {
+                    null
+                }
+                cursor = if (row?.frame?.fileName != null) {
+                    Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+                } else {
+                    Cursor.getDefaultCursor()
+                }
+            }
+        })
+    }
+    private val copyExceptionButton = JButton("Copy exception").apply {
+        isEnabled = false
+        addActionListener { selectedEntry?.throwable?.raw?.let(::copyText) }
+    }
+    private val copyFrameButton = JButton("Copy frame").apply {
+        isEnabled = false
+        addActionListener { frameList.selectedValue?.frame?.let { copyText(formatFrame(it)) } }
+    }
+    private val exceptionPanel = JPanel(BorderLayout(0, 8)).apply {
+        border = BorderFactory.createEmptyBorder(10, 10, 10, 10)
+        val controls = JPanel(BorderLayout(8, 0)).apply {
+            isOpaque = false
+            add(exceptionSummary, BorderLayout.CENTER)
+            val buttons = JPanel(FlowLayout(FlowLayout.RIGHT, 6, 0)).apply {
+                isOpaque = false
+                add(copyFrameButton)
+                add(copyExceptionButton)
+            }
+            add(buttons, BorderLayout.EAST)
+        }
+        add(controls, BorderLayout.NORTH)
+        add(JBScrollPane(frameList), BorderLayout.CENTER)
+    }
     private val detailTabs = JTabbedPane().apply {
         addTab("Message", JBScrollPane(messageArea))
         addTab("Raw record", JBScrollPane(rawArea))
+        addTab("Exception", exceptionPanel)
     }
     private val details = JPanel(BorderLayout(0, 8)).apply {
         border = BorderFactory.createEmptyBorder(12, 14, 12, 12)
@@ -102,6 +168,12 @@ class LogViewerPanel {
         add(splitPane, BorderLayout.CENTER)
     }
 
+    init {
+        frameList.addListSelectionListener { event ->
+            if (!event.valueIsAdjusting) copyFrameButton.isEnabled = frameList.selectedValue?.frame != null
+        }
+    }
+
     private var source: List<LogEntry> = emptyList()
     private var filter: LevelFilter = LevelFilter()
     private var search: LogSearch = LogSearch.EMPTY
@@ -121,6 +193,10 @@ class LogViewerPanel {
     fun setCancelLoadAction(action: (() -> Unit)?) {
         cancelLoadAction = action
         updateLoadStatus(lastSnapshot)
+    }
+
+    fun setStackFrameNavigationHandler(handler: ((StackFrame, JComponent) -> Unit)?) {
+        stackFrameNavigationHandler = handler
     }
 
     fun updateFilter(filter: LevelFilter) {
@@ -156,23 +232,101 @@ class LogViewerPanel {
         source.filter { filter.isAllowed(it) && search.matches(it) }
 
     private fun showDetails(entry: LogEntry?) {
+        selectedEntry = entry
         if (entry == null) {
             detailTitle.text = "Select a record"
             detailContext.text = " "
             messageArea.text = ""
             rawArea.text = ""
+            exceptionSummary.text = "No exception details"
+            frameModel.clear()
+            copyExceptionButton.isEnabled = false
+            copyFrameButton.isEnabled = false
             return
         }
         detailTitle.text = listOfNotNull(entry.timestamp, entry.level.display()).joinToString("    ·    ")
         val context = metadataSummary(entry).ifBlank { entry.logger.orEmpty() }
         detailContext.text = listOfNotNull(
             context.takeIf { it.isNotBlank() },
+            "Stack trace continues in following records".takeIf { entry.metadata["stackTracePending"] == "true" },
             "Record preview truncated at the 1 MiB limit".takeIf { entry.isTruncated },
+            "Stack trace truncated at the safety limit".takeIf { entry.throwable?.isTruncated == true },
         ).joinToString("    ·    ").ifBlank { " " }
         messageArea.text = entry.message
         messageArea.caretPosition = 0
         rawArea.text = prettyRaw(entry.raw)
         rawArea.caretPosition = 0
+        updateExceptionDetails(entry.throwable)
+        detailTabs.selectedIndex = if (entry.throwable != null) EXCEPTION_TAB_INDEX else MESSAGE_TAB_INDEX
+    }
+
+    private fun updateExceptionDetails(throwable: ThrowableInfo?) {
+        frameModel.clear()
+        if (throwable == null) {
+            exceptionSummary.text = "No exception details"
+            copyExceptionButton.isEnabled = false
+            copyFrameButton.isEnabled = false
+            return
+        }
+        val summary = listOfNotNull(throwable.className, throwable.message).joinToString(": ")
+            .ifBlank { "Exception" } + if (throwable.isTruncated) " (details truncated)" else ""
+        exceptionSummary.text = "<html>${escapeHtml(summary)}</html>"
+        addThrowableFrames(throwable, causeLabel = null, depth = 0)
+        copyExceptionButton.isEnabled = true
+        copyFrameButton.isEnabled = false
+    }
+
+    private fun addThrowableFrames(throwable: ThrowableInfo, causeLabel: String?, depth: Int) {
+        if (causeLabel != null) {
+            val label = listOfNotNull(throwable.className, throwable.message).joinToString(": ").ifBlank { "Exception" }
+            frameModel.addElement(FrameRow("${"  ".repeat(depth)}$causeLabel $label", null))
+        }
+        throwable.frames.forEach { frame ->
+            frameModel.addElement(FrameRow("${"  ".repeat(depth)}${formatFrame(frame)}", frame))
+        }
+        if (throwable.omittedFrameCount > 0) {
+            frameModel.addElement(FrameRow("${"  ".repeat(depth)}… ${throwable.omittedFrameCount} more", null))
+        }
+        throwable.causes.forEach { addThrowableFrames(it, "Caused by:", depth + 1) }
+        throwable.suppressed.forEach { addThrowableFrames(it, "Suppressed:", depth + 1) }
+    }
+
+    private fun formatFrame(frame: StackFrame): String {
+        val method = listOfNotNull(frame.declaringClass, frame.methodName).joinToString(".")
+        val location = when {
+            frame.fileName != null && frame.lineNumber != null -> "${frame.fileName}:${frame.lineNumber}"
+            frame.fileName != null -> frame.fileName
+            else -> "Unknown Source"
+        }
+        return "at $method($location)"
+    }
+
+    private fun copyText(text: String) {
+        CopyPasteManager.getInstance().setContents(StringSelection(text))
+    }
+
+    private data class FrameRow(
+        val text: String,
+        val frame: StackFrame?,
+        val depth: Int = 0,
+    )
+
+    private inner class FrameRowRenderer : DefaultListCellRenderer() {
+        override fun getListCellRendererComponent(
+            list: JList<*>?,
+            value: Any?,
+            index: Int,
+            isSelected: Boolean,
+            cellHasFocus: Boolean,
+        ): Component {
+            val label = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus)
+            val row = value as? FrameRow ?: return label
+            val link = row.frame?.fileName != null
+            text = "<html>${escapeHtml(row.text)}</html>"
+            border = BorderFactory.createEmptyBorder(2, 8 + row.depth * 12, 2, 8)
+            if (link && !isSelected) foreground = JBColor(0x245EA8, 0x73A7F5)
+            return label
+        }
     }
 
     private fun metadataSummary(entry: LogEntry): String {
@@ -354,7 +508,11 @@ class LogViewerPanel {
 
     private companion object {
         const val CARD_HEIGHT = 54
+        const val MESSAGE_TAB_INDEX = 0
+        const val EXCEPTION_TAB_INDEX = 2
         val TIME_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("MMM d · HH:mm:ss", Locale.getDefault())
-        val DISPLAYED_METADATA_KEYS = setOf("app", "module", "function", "sourceLine")
+        val DISPLAYED_METADATA_KEYS = setOf(
+            "app", "module", "function", "sourceLine", "stackTracePending", "exceptionTruncated",
+        )
     }
 }

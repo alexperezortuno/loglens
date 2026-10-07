@@ -23,6 +23,8 @@ data class LogEntry(
     val throwable: ThrowableInfo? = null,
     /** Additional structured fields, such as JSON log attributes. */
     val metadata: Map<String, String> = emptyMap(),
+    /** True when the source record exceeded the reader's per-record memory limit. */
+    val isTruncated: Boolean = false,
 ) {
     /** Convenience accessor returning a stable identifier — used for selection. */
     fun identity(): String = "${lineNumber ?: 0}#${raw.hashCode()}"

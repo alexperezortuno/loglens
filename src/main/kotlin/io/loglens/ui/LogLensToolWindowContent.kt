@@ -2,6 +2,7 @@ package io.loglens.ui
 
 import com.intellij.openapi.project.Project
 import com.intellij.ui.components.JBPanel
+import io.loglens.navigation.StackFrameNavigator
 import io.loglens.service.LogLensProjectService
 import java.awt.BorderLayout
 
@@ -30,6 +31,7 @@ class LogLensToolWindowContent(private val project: Project) {
         val service = project.getService(LogLensProjectService::class.java) ?: return
         viewer.setLoadMoreAction(service::loadMore)
         viewer.setCancelLoadAction(service::cancelLoad)
+        viewer.setStackFrameNavigationHandler { frame, _ -> StackFrameNavigator.navigate(project, frame) }
         // Apply current snapshot immediately in case the project already had one.
         service.snapshot().let { viewer.update(it) }
         service.addListener { snapshot ->

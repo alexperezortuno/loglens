@@ -91,6 +91,16 @@ class SpringBootLogParserTest {
     }
 
     @Test
+    fun `parse detects throwable after Spring Boot message prefix`() {
+        val line = "2026-10-01 10:30:25 ERROR 1 --- [main] c.e.App : java.lang.IllegalStateException: failed"
+
+        val entry = parser.parse(line)
+
+        assertEquals("java.lang.IllegalStateException", entry.throwable?.className)
+        assertEquals("failed", entry.throwable?.message)
+    }
+
+    @Test
     fun `parse returns lineNumber when provided`() {
         val line = "2026-10-01 10:30:25  INFO 1 --- [main] c.e.App : Hi"
         assertEquals(42, parser.parse(line, lineNumber = 42).lineNumber)

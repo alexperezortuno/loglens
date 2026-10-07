@@ -23,6 +23,12 @@ object RawText {
         entry.thread?.let { append(it); append('\n') }
         entry.level.name.let { append(it); append('\n') }
         entry.timestamp?.let { append(it); append('\n') }
+        entry.metadata.forEach { (key, value) ->
+            append(key)
+            append(':')
+            append(value)
+            append('\n')
+        }
         entry.throwable?.let {
             it.className?.let { c -> append(c); append('\n') }
             it.message?.let { m -> append(m); append('\n') }

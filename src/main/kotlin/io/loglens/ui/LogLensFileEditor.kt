@@ -8,6 +8,7 @@ import com.intellij.openapi.util.UserDataHolderBase
 import com.intellij.openapi.vfs.VirtualFile
 import io.loglens.service.LogLensProjectService
 import io.loglens.service.LogLensProjectService.LogLensSnapshot
+import io.loglens.navigation.StackFrameNavigator
 import java.awt.BorderLayout
 import java.beans.PropertyChangeListener
 import java.nio.file.Path
@@ -16,7 +17,7 @@ import javax.swing.JPanel
 
 /** Read-only file editor that presents a log with LogLens parsing and ANSI styling. */
 class LogLensFileEditor(
-    project: Project,
+    private val project: Project,
     private val file: VirtualFile,
 ) : UserDataHolderBase(), FileEditor {
 
@@ -35,6 +36,7 @@ class LogLensFileEditor(
     init {
         viewer.setLoadMoreAction(service::loadMore)
         viewer.setCancelLoadAction(service::cancelLoad)
+        viewer.setStackFrameNavigationHandler { frame, _ -> StackFrameNavigator.navigate(project, frame) }
         service.addListener(snapshotListener)
         viewer.update(service.snapshot().takeIf { it.path == filePath } ?: LogLensSnapshot.empty())
         service.openFile(file)

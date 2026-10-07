@@ -259,6 +259,13 @@ Large-file handling should eventually use techniques such as:
 
 The UI thread must never perform expensive parsing.
 
+The current loader starts at the beginning of the file and reads asynchronously in
+bounded pages: up to 10 MiB or 10,000 records initially, then 4 MiB or 5,000
+records per page. It retains at most 20,000 records or an estimated 32 MiB of
+record text, and caps an individual record at 1 MiB. An oversized record is
+shown as a truncated preview while its remainder is skipped in cancellable
+chunks. Search and filtering apply to the records currently loaded.
+
 ---
 
 # 10. Tail mode

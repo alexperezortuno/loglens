@@ -6,6 +6,7 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
+import io.loglens.exception.StackTraceAssembler
 import io.loglens.model.LogEntry
 import io.loglens.parser.ParserRegistry
 import java.nio.file.Path
@@ -107,15 +108,19 @@ class LogLensProjectService(private val project: Project) : Disposable {
                     isCancelled = { Thread.currentThread().isInterrupted || !isActive(session) },
                 )
 
-                val parsed = ArrayList<Pair<LogEntry, Long>>(page.records.size)
+                val emitted = mutableListOf<LogEntry>()
                 for (record in page.records) {
                     if (Thread.currentThread().isInterrupted || !isActive(session)) {
                         throw CancellationException("Log loading cancelled")
                     }
                     val entry = session.registry.parse(record.text, record.lineNumber)
                         .copy(isTruncated = record.truncated)
-                    parsed += entry to record.endByte - record.startByte
+                    emitted += session.stackTraceAssembler.accept(entry)
                 }
+                if (!page.hasMore && !page.nextPageStartsInsideRecord) {
+                    emitted += session.stackTraceAssembler.finish()
+                }
+                val pendingPreview = session.stackTraceAssembler.preview()
 
                 val result: LogLensSnapshot
                 synchronized(lock) {
@@ -126,17 +131,38 @@ class LogLensProjectService(private val project: Project) : Disposable {
                     session.nextLineNumber = page.nextLineNumber
                     session.startsInsideRecord = page.nextPageStartsInsideRecord
                     var retentionLimitReached = false
-                    for ((entry, recordBytes) in parsed) {
+                    val acceptedEntries = session.entries.toMutableList()
+                    var retainedBytes = acceptedEntries.sumOf(::estimateRetainedBytes)
+                    val pendingBytes = pendingPreview?.let(::estimateRetainedBytes) ?: 0L
+                    for (entry in emitted) {
                         val estimatedBytes = estimateRetainedBytes(entry)
-                        if (session.entries.size >= MAX_RETAINED_ENTRIES ||
-                            session.retainedBytes + estimatedBytes > MAX_RETAINED_BYTES
+                        if (acceptedEntries.size + 1 + (if (pendingPreview != null) 1 else 0) > MAX_RETAINED_ENTRIES ||
+                            retainedBytes + estimatedBytes + pendingBytes > MAX_RETAINED_BYTES
                         ) {
                             retentionLimitReached = true
                             break
                         }
-                        session.entries += entry
-                        session.retainedBytes += maxOf(recordBytes, estimatedBytes)
+                        acceptedEntries += entry
+                        retainedBytes += estimatedBytes
                     }
+                    if (!retentionLimitReached && pendingPreview != null) {
+                        if (acceptedEntries.size + 1 > MAX_RETAINED_ENTRIES ||
+                            retainedBytes + pendingBytes > MAX_RETAINED_BYTES
+                        ) {
+                            retentionLimitReached = true
+                        } else {
+                            retainedBytes += pendingBytes
+                        }
+                    }
+                    if (retentionLimitReached) {
+                        session.stackTraceAssembler.reset()
+                        session.pendingPreview = null
+                    } else {
+                        session.pendingPreview = pendingPreview
+                    }
+                    session.entries.clear()
+                    session.entries.addAll(acceptedEntries)
+                    session.retainedBytes = retainedBytes
                     if (retentionLimitReached || (page.hasMore && (
                             session.entries.size >= MAX_RETAINED_ENTRIES ||
                                 session.retainedBytes >= MAX_RETAINED_BYTES
@@ -218,7 +244,9 @@ class LogLensProjectService(private val project: Project) : Disposable {
         val path: Path,
     ) {
         val registry: ParserRegistry = ParserRegistry.defaults()
+        val stackTraceAssembler = StackTraceAssembler()
         val entries = mutableListOf<LogEntry>()
+        var pendingPreview: LogEntry? = null
         var nextByteOffset: Long = 0
         var nextLineNumber: Int = 1
         var startsInsideRecord: Boolean = false
@@ -232,7 +260,7 @@ class LogLensProjectService(private val project: Project) : Disposable {
 
         fun toSnapshot(): LogLensSnapshot = LogLensSnapshot(
             path = path,
-            entries = entries.toList(),
+            entries = if (pendingPreview == null) entries.toList() else entries + pendingPreview!!,
             isLoading = isLoading,
             canLoadMore = canLoadMore,
             bytesRead = bytesRead,

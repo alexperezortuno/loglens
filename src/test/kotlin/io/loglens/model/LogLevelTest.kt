@@ -52,9 +52,17 @@ class LogLevelTest {
     }
 
     @Test
-    fun `FILTERABLE excludes UNKNOWN`() {
+    fun `FILTERABLE includes UNKNOWN`() {
         assertEquals(
-            listOf(LogLevel.TRACE, LogLevel.DEBUG, LogLevel.INFO, LogLevel.WARN, LogLevel.ERROR, LogLevel.FATAL),
+            listOf(
+                LogLevel.TRACE,
+                LogLevel.DEBUG,
+                LogLevel.INFO,
+                LogLevel.WARN,
+                LogLevel.ERROR,
+                LogLevel.FATAL,
+                LogLevel.UNKNOWN,
+            ),
             LogLevel.FILTERABLE,
         )
     }

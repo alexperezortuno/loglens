@@ -7,8 +7,10 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.UserDataHolderBase
 import com.intellij.openapi.vfs.VirtualFile
 import io.loglens.service.LogLensProjectService
+import io.loglens.service.LogLensProjectService.LogLensSnapshot
 import java.awt.BorderLayout
 import java.beans.PropertyChangeListener
+import java.nio.file.Path
 import javax.swing.JComponent
 import javax.swing.JPanel
 
@@ -18,17 +20,24 @@ class LogLensFileEditor(
     private val file: VirtualFile,
 ) : UserDataHolderBase(), FileEditor {
 
+    private val service = project.getService(LogLensProjectService::class.java)
+    private val filePath = Path.of(file.path)
     private val viewer = LogViewerPanel()
     private val toolbar = LogViewerToolbar(viewer)
+    private val snapshotListener: (LogLensSnapshot) -> Unit = { snapshot ->
+        viewer.update(if (snapshot.path == filePath) snapshot else LogLensSnapshot.empty())
+    }
     private val root = JPanel(BorderLayout()).apply {
         add(toolbar.component, BorderLayout.NORTH)
         add(viewer.component, BorderLayout.CENTER)
     }
 
     init {
-        val service = project.getService(LogLensProjectService::class.java)
+        viewer.setLoadMoreAction(service::loadMore)
+        viewer.setCancelLoadAction(service::cancelLoad)
+        service.addListener(snapshotListener)
+        viewer.update(service.snapshot().takeIf { it.path == filePath } ?: LogLensSnapshot.empty())
         service.openFile(file)
-        viewer.update(service.snapshot())
     }
 
     override fun getComponent(): JComponent = root
@@ -38,6 +47,10 @@ class LogLensFileEditor(
     override fun getName(): String = "LogLens"
 
     override fun getFile(): VirtualFile = file
+
+    override fun selectNotify() {
+        if (service.snapshot().path != filePath) service.openFile(file)
+    }
 
     override fun getState(level: FileEditorStateLevel): FileEditorState = FileEditorState.INSTANCE
 
@@ -52,6 +65,7 @@ class LogLensFileEditor(
     override fun removePropertyChangeListener(listener: PropertyChangeListener) = Unit
 
     override fun dispose() {
+        service.removeListener(snapshotListener)
         toolbar.dispose()
     }
 }

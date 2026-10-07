@@ -20,9 +20,11 @@ dependencies {
     }
 
     implementation(kotlin("stdlib-jdk8"))
+    implementation("com.google.code.gson:gson:2.11.0")
 
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5:2.1.20")
     testImplementation("org.junit.jupiter:junit-jupiter:5.11.3")
+    testRuntimeOnly("junit:junit:4.13.2")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.11.3")
 }
 

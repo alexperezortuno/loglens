@@ -8,9 +8,7 @@ import io.loglens.model.LogLevel
  * visible. The contract is straightforward OR: an entry passes if any of
  * its enabled levels match.
  *
- * Entries that the parser could not classify (level == [LogLevel.UNKNOWN])
- * are always shown — they represent malformed lines that the user will
- * still want to inspect.
+ * Unknown entries use the same toggle semantics as recognized severities.
  */
 class LevelFilter(
     enabled: Set<LogLevel> = DEFAULT_ENABLED,
@@ -18,9 +16,7 @@ class LevelFilter(
     private val enabledLevels: MutableSet<LogLevel> = enabled.toMutableSet()
 
     fun isAllowed(entry: LogEntry): Boolean {
-        val level = entry.level
-        if (level == LogLevel.UNKNOWN) return true
-        return level in enabledLevels
+        return entry.level in enabledLevels
     }
 
     fun setEnabled(level: LogLevel, enabled: Boolean) {
@@ -42,6 +38,7 @@ class LevelFilter(
             LogLevel.WARN,
             LogLevel.ERROR,
             LogLevel.FATAL,
+            LogLevel.UNKNOWN,
         )
     }
 }

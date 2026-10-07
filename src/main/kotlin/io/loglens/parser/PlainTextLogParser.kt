@@ -2,6 +2,7 @@ package io.loglens.parser
 
 import io.loglens.model.LogEntry
 import io.loglens.model.LogLevel
+import io.loglens.exception.StackTraceDetector
 
 /**
  * Fallback parser that accepts any non-empty line.
@@ -29,6 +30,7 @@ class PlainTextLogParser : LogParser {
             message = detected.stripped ?: line,
             raw = line,
             lineNumber = lineNumber,
+            throwable = StackTraceDetector.peek(detected.stripped ?: line),
         )
     }
 

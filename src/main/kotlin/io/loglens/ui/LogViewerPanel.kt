@@ -11,6 +11,7 @@ import io.loglens.model.LogEntry
 import io.loglens.model.LogLevel
 import io.loglens.search.LogSearch
 import io.loglens.service.LogLensProjectService.LogLensSnapshot
+import io.loglens.util.AnsiCodes
 import io.loglens.util.RawText
 import java.awt.BorderLayout
 import java.awt.Color
@@ -85,6 +86,13 @@ class LogViewerPanel {
             hasFocus: Boolean,
         ) {
             if (value == null) return
+            if (AnsiCodes.containsCodes(value.raw)) {
+                AnsiCodes.segments(value.raw).forEach { segment ->
+                    append(segment.text, attributesFor(segment.style))
+                }
+                toolTipText = AnsiCodes.strip(value.raw)
+                return
+            }
             val levelColor = colorFor(value.level)
             val levelName = value.level.name.padEnd(5)
             val prefix = if (value.timestamp != null) {
@@ -101,6 +109,17 @@ class LogViewerPanel {
             }
             append(RawText.summary(value), SimpleTextAttributes.REGULAR_ATTRIBUTES)
             toolTipText = value.raw
+        }
+
+        private fun attributesFor(style: AnsiCodes.Style): SimpleTextAttributes {
+            var fontStyle = SimpleTextAttributes.STYLE_PLAIN
+            if (style.bold) fontStyle = fontStyle or SimpleTextAttributes.STYLE_BOLD
+            if (style.italic) fontStyle = fontStyle or SimpleTextAttributes.STYLE_ITALIC
+            if (style.underline) fontStyle = fontStyle or SimpleTextAttributes.STYLE_UNDERLINE
+            if (fontStyle == SimpleTextAttributes.STYLE_PLAIN && style.foreground == null && style.background == null) {
+                return SimpleTextAttributes.REGULAR_ATTRIBUTES
+            }
+            return SimpleTextAttributes(fontStyle, style.foreground, style.background)
         }
 
         private fun colorFor(level: LogLevel): Color = when (level) {

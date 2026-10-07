@@ -32,6 +32,7 @@ class LogViewerToolbar(
     private val statusLabel: JLabel = JLabel(" ")
 
     init {
+        queryField.toolTipText = "Search within the records currently loaded in the viewer."
         levelToggles = LogLevel.FILTERABLE.associateWith { level ->
             JCheckBox(level.display()).apply {
                 isSelected = LogLensSettings.getInstance().let {

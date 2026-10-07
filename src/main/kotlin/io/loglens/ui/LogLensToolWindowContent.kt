@@ -28,6 +28,8 @@ class LogLensToolWindowContent(private val project: Project) {
 
     fun onAttach() {
         val service = project.getService(LogLensProjectService::class.java) ?: return
+        viewer.setLoadMoreAction(service::loadMore)
+        viewer.setCancelLoadAction(service::cancelLoad)
         // Apply current snapshot immediately in case the project already had one.
         service.snapshot().let { viewer.update(it) }
         service.addListener { snapshot ->

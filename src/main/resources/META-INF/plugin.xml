@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<idea-plugin url="https://github.com/loglens/loglens" requireRestart="false">
+    <id>io.loglens.plugin</id>
+    <name>LogLens</name>
+    <version>0.1.0</version>
+    <vendor>LogLens</vendor>
+    <description><![CDATA[
+        A fast, offline-first log viewer for IntelliJ IDEA.
+
+        Open .log and .out files in the ANSI-aware LogLens editor, or load
+        .txt files in the dedicated tool window. Includes level filtering,
+        full-text and regex search. No network required.
+
+        See SPEC.md and ROADMAP.md for the planned feature set.
+    ]]></description>
+
+    <!-- IntelliJ Platform 2024.3 (build 243) through 2025.3 (build 253.*) -->
+    <idea-version since-build="243" until-build="253.*" />
+
+    <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.java</depends>
+
+    <change-notes><![CDATA[
+        <h3>0.1.0 — Initial MVP</h3>
+        <ul>
+            <li>Dedicated tool window with TRACE/DEBUG/INFO/WARN/ERROR/FATAL filter toggles.</li>
+            <li>Plain-text, Spring Boot and newline-delimited JSON log formats.</li>
+            <li>ANSI SGR colors, backgrounds and text styles in the LogLens viewer.</li>
+            <li>Compact log feed with selected-record message and raw-record details.</li>
+            <li>Grouped Java/Kotlin exceptions with source navigation and copy actions.</li>
+            <li>LogLens file editor for ordinary .log and .out file opens.</li>
+            <li>Plain-text and case-sensitive search; optional regular expressions.</li>
+            <li>Buffered file reader for .log, .out and .txt files.</li>
+            <li>Graceful handling of malformed lines.</li>
+            <li>Unit tests for parsers, filters and search.</li>
+        </ul>
+    ]]></change-notes>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <!-- Tool Window -->
+        <toolWindow
+            id="LogLens"
+            anchor="bottom"
+            icon="io.loglens.icons.LogLensIcons"
+            factoryClass="io.loglens.ui.LogLensToolWindowFactory"
+            canCloseContents="true" />
+
+        <!-- Show supported log files in the ANSI-aware viewer on ordinary open. -->
+        <fileEditorProvider implementation="io.loglens.ui.LogLensFileEditorProvider" />
+
+        <!-- Settings screen. -->
+        <applicationConfigurable
+            parentId="tools"
+            instance="io.loglens.settings.LogLensSettingsConfigurable"
+            id="io.loglens.settings"
+            displayName="LogLens" />
+
+        <!-- Persistent application state for filter / search preferences. -->
+        <applicationService serviceImplementation="io.loglens.settings.LogLensSettings" />
+
+        <!-- Persistent project-level state holds the last opened log and parsed entries. -->
+        <projectService serviceImplementation="io.loglens.service.LogLensProjectService" />
+    </extensions>
+
+    <actions>
+        <action
+            id="io.loglens.OpenLogFile"
+            class="io.loglens.ui.OpenLogFileAction"
+            description="Open a log file in LogLens"
+            icon="io.loglens.icons.LogLensIcons"
+            text="Open Log File…">
+            <add-to-group group-id="FileMenu" anchor="after" relative-to-action="OpenFile" />
+        </action>
+
+        <action
+            id="io.loglens.OpenCurrentLogInLogLens"
+            class="io.loglens.ui.OpenCurrentLogInLogLensAction"
+            description="View this log in LogLens, including ANSI colors"
+            text="Open in LogLens">
+            <add-to-group group-id="EditorPopupMenu" anchor="last" />
+        </action>
+
+        <action
+            id="io.loglens.ToggleLogLensWindow"
+            class="io.loglens.ui.ToggleLogLensToolWindowAction"
+            description="Show the LogLens tool window"
+            icon="io.loglens.icons.LogLensIcons"
+            text="LogLens" />
+    </actions>
+</idea-plugin>

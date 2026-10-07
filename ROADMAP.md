@@ -8,69 +8,69 @@ Goal:
 
 ### Plugin foundation
 
-- [ ] IntelliJ Platform project
-- [ ] Kotlin
-- [ ] Gradle Kotlin DSL
-- [ ] `plugin.xml`
-- [ ] LogLens Tool Window
-- [ ] Basic plugin icon
-- [ ] Plugin settings skeleton
+- [x] IntelliJ Platform project
+- [x] Kotlin
+- [x] Gradle Kotlin DSL
+- [x] `plugin.xml`
+- [x] LogLens Tool Window
+- [x] Basic plugin icon
+- [x] Plugin settings skeleton
 
 ### Log input
 
-- [ ] Open local log file
-- [ ] `.log` support
-- [ ] `.out` support
-- [ ] `.txt` support
-- [ ] Buffered file reading
+- [x] Open local log file
+- [x] `.log` support
+- [x] `.out` support
+- [x] `.txt` support
+- [x] Bounded buffered file reading
 
 ### Domain
 
-- [ ] `LogEntry`
-- [ ] `LogLevel`
-- [ ] `ThrowableInfo`
-- [ ] Common parser interface
-- [ ] `ParserRegistry`
+- [x] `LogEntry`
+- [x] `LogLevel`
+- [x] `ThrowableInfo`
+- [x] Common parser interface
+- [x] `ParserRegistry`
 
 ### Parsing
 
-- [ ] Plain-text parser
-- [ ] Spring Boot parser
-- [ ] Timestamp detection
-- [ ] Log-level detection
-- [ ] Thread detection
-- [ ] Logger/class detection
-- [ ] Message extraction
+- [x] Plain-text parser
+- [x] Spring Boot parser
+- [x] Timestamp detection
+- [x] Log-level detection
+- [x] Thread detection
+- [x] Logger/class detection
+- [x] Message extraction
 
 ### Viewer
 
-- [ ] Display parsed entries
-- [ ] Visually distinguish log levels
-- [ ] Scroll through logs
-- [ ] Preserve raw message
-- [ ] Handle malformed lines gracefully
+- [x] Display parsed entries
+- [x] Visually distinguish log levels
+- [x] Scroll through logs
+- [x] Preserve raw message
+- [x] Handle malformed lines gracefully
 
 ### Filters
 
-- [ ] TRACE
-- [ ] DEBUG
-- [ ] INFO
-- [ ] WARN
-- [ ] ERROR
-- [ ] FATAL
+- [x] TRACE
+- [x] DEBUG
+- [x] INFO
+- [x] WARN
+- [x] ERROR
+- [x] FATAL
 
 ### Search
 
-- [ ] Plain-text search
-- [ ] Case-sensitive option
-- [ ] Regex search
-- [ ] Combine search + level filters
+- [x] Plain-text search
+- [x] Case-sensitive option
+- [x] Regex search
+- [x] Combine search + level filters
 
 ### Testing
 
-- [ ] Parser unit tests
-- [ ] Filter unit tests
-- [ ] Malformed input tests
+- [x] Parser unit tests
+- [x] Filter unit tests
+- [x] Malformed input tests
 
 ### 0.1 completion criteria
 
@@ -101,25 +101,25 @@ Goal:
 
 ### Stack traces
 
-- [ ] Detect Java exceptions
-- [ ] Detect `Caused by`
-- [ ] Parse stack frames
-- [ ] Group multiline stack traces
+- [x] Detect Java exceptions
+- [x] Detect `Caused by`
+- [x] Parse stack frames
+- [x] Group multiline stack traces across bounded pages
 
 ### Navigation
 
-- [ ] Recognize `File.java:line`
-- [ ] Find source in project
-- [ ] Open referenced source
-- [ ] Navigate to exact line
-- [ ] Support nested modules
+- [x] Recognize `File.java:line`
+- [x] Find source in project
+- [x] Open referenced source
+- [x] Navigate to exact line
+- [x] Support nested modules
 
 ### UX
 
-- [ ] Clickable stack frames
-- [ ] Exception visualization
-- [ ] Copy complete exception
-- [ ] Copy individual stack frame
+- [x] Clickable stack frames
+- [x] Exception visualization
+- [x] Copy complete exception
+- [x] Copy individual stack frame
 
 ---
 
@@ -131,15 +131,15 @@ Goal:
 
 ### Formats
 
-- [ ] JSON logs
+- [x] Newline-delimited JSON logs
 - [ ] Logback
 - [ ] Log4j
 
 ### Large files
 
-- [ ] Incremental parsing
-- [ ] Lazy rendering
-- [ ] Bounded in-memory cache
+- [x] Incremental background parsing and paging
+- [x] Lazy list rendering
+- [x] Bounded in-memory cache
 - [ ] Background indexing
 
 Target:
@@ -288,7 +288,7 @@ Requirements:
 
 - [ ] Stable parser API
 - [ ] Reliable large-file support
-- [ ] Stack-trace navigation
+- [x] Stack-trace navigation
 - [ ] Search and advanced filtering
 - [ ] Tail mode
 - [ ] Spring Boot

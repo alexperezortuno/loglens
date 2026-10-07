@@ -131,15 +131,15 @@ Goal:
 
 ### Formats
 
-- [ ] JSON logs
+- [x] Newline-delimited JSON logs
 - [ ] Logback
 - [ ] Log4j
 
 ### Large files
 
-- [ ] Incremental parsing
-- [ ] Lazy rendering
-- [ ] Bounded in-memory cache
+- [x] Incremental background parsing and paging
+- [x] Lazy list rendering
+- [x] Bounded in-memory cache
 - [ ] Background indexing
 
 Target:

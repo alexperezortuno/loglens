@@ -2,8 +2,10 @@ package io.loglens.exception
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class StackTraceDetectorTest {
 
@@ -64,5 +66,51 @@ class StackTraceDetectorTest {
         val info = StackTraceDetector.peek("   java.lang.RuntimeException: oops")
         assertNotNull(info)
         assertEquals("java.lang.RuntimeException", info!!.className)
+    }
+
+    @Test
+    fun `parse extracts causes suppressed exceptions and omitted frames`() {
+        val raw = """
+            java.lang.IllegalStateException: outer
+                at com.example.Service.run(Service.java:41)
+            Suppressed: java.lang.IllegalArgumentException: close failed
+                at com.example.Store.close(Store.kt:90)
+            Caused by: java.io.IOException: disk failed
+                at com.example.Store.load(Store.kt:12)
+                ... 2 more
+        """.trimIndent()
+
+        val info = StackTraceDetector.parse(raw)
+
+        assertNotNull(info)
+        assertEquals("java.lang.IllegalStateException", info!!.className)
+        assertEquals(41, info.frames.single().lineNumber)
+        assertEquals("java.lang.IllegalArgumentException", info.suppressed.single().className)
+        assertEquals("Store.kt", info.suppressed.single().frames.single().fileName)
+        assertEquals("java.io.IOException", info.causes.single().className)
+        assertEquals(2, info.causes.single().omittedFrameCount)
+        assertEquals(raw, info.raw)
+    }
+
+    @Test
+    fun `peek finds an exception after a log prefix and parses thread headers`() {
+        val prefixed = StackTraceDetector.peek(
+            "2026-10-01 10:30:25 ERROR com.example.App : java.lang.IllegalStateException: failed",
+        )
+        assertNotNull(prefixed)
+        assertEquals("java.lang.IllegalStateException", prefixed!!.className)
+
+        val thread = StackTraceDetector.peek("Exception in thread \"main\" java.lang.AssertionError: failed")
+        assertNotNull(thread)
+        assertEquals("java.lang.AssertionError", thread!!.className)
+    }
+
+    @Test
+    fun `continuation detection recognises frames causes suppressed and omitted frames`() {
+        assertTrue(StackTraceDetector.isContinuation("    at com.example.Service.run(Service.java:41)"))
+        assertTrue(StackTraceDetector.isContinuation("Caused by: java.io.IOException: failed"))
+        assertTrue(StackTraceDetector.isContinuation("Suppressed: java.lang.Exception: close"))
+        assertTrue(StackTraceDetector.isContinuation("    ... 3 more"))
+        assertFalse(StackTraceDetector.isContinuation("2026-10-01 INFO next event"))
     }
 }

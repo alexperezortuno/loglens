@@ -1,6 +1,7 @@
 package io.loglens.parser
 
 import io.loglens.model.LogEntry
+import io.loglens.util.AnsiCodes
 
 /**
  * Selects the appropriate [LogParser] for an input line.
@@ -34,6 +35,10 @@ class ParserRegistry(
      * we don't bounce between formats inside a single file.
      */
     fun selectParser(line: String): LogParser {
+        return selectParserFor(AnsiCodes.strip(line))
+    }
+
+    private fun selectParserFor(line: String): LogParser {
         if (line.isBlank()) return activeParser
         if (activeParser.supports(line) && activeParser !is PlainTextLogParser) {
             return activeParser
@@ -57,8 +62,9 @@ class ParserRegistry(
      * ```
      */
     fun parse(line: String, lineNumber: Int? = null): LogEntry {
-        val parser = selectParser(line)
-        return parser.parse(line, lineNumber)
+        val normalizedLine = AnsiCodes.strip(line)
+        val parser = selectParserFor(normalizedLine)
+        return parser.parse(normalizedLine, lineNumber).copy(raw = line)
     }
 
     /** Drop the cached affinity. Call when switching files. */

@@ -2,7 +2,7 @@
 
 LogLens is an IntelliJ IDEA plugin that brings a dedicated log viewer into the IDE.
 
-Open `.log`, `.out` and `.txt` files in a dedicated tool window with level filtering, plain-text and regex search. No network access, no external services — the whole experience is local-first.
+Open `.log`, `.out` and `.txt` files in LogLens with level filtering, plain-text and regex search. Spring Boot, ANSI-formatted and newline-delimited JSON logs are supported. No network access, no external services — the whole experience is local-first.
 
 The technical specification lives in [SPEC.md](SPEC.md) and the iteration plan in [ROADMAP.md](ROADMAP.md). The current source tree implements the **0.1 MVP** described in those documents.
 
@@ -12,9 +12,11 @@ The technical specification lives in [SPEC.md](SPEC.md) and the iteration plan i
 - Opens `.log` and `.out` files directly in an ANSI-aware LogLens file editor.
 - **Open Log File…** action that loads `.log`, `.out`, `.txt` files into the viewer.
 - ANSI SGR foreground/background colors, bold, italic and underline rendering in the viewer.
+- Newline-delimited JSON parsing with structured metadata and a compact feed/detail layout.
 - **Buffered file reading** to keep large files responsive.
 - Parsing pipeline built around a small `LogParser` interface with a `ParserRegistry`:
   - `SpringBootLogParser` — Spring Boot / Logback default pattern (timestamp, level, thread, logger).
+  - `JsonLinesLogParser` — one JSON object per line, including structured app/module/function fields.
   - `PlainTextLogParser` — fallback for arbitrary text files with optional level detection.
 - `LogEntry`, `LogLevel` and `ThrowableInfo` domain types shared by every parser.
 - **Level filter** toggles for `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR`, `FATAL` (UNKNOWN lines are always shown).
@@ -50,7 +52,7 @@ The resulting distribution ZIP is written to `build/distributions/`. Install it 
 
 ## Running
 
-After the plugin is installed and the IDE restarted, open `.log` and `.out` files normally; LogLens will show them with ANSI colors and styles. For `.txt` files, use **File → Open Log File…** or choose **Open in LogLens** from the editor's context menu. Use the level toggles and search box to narrow the view.
+After the plugin is installed and the IDE restarted, open `.log` and `.out` files normally; LogLens will show them in a compact feed with a selected-record detail pane. ANSI colors and JSON metadata are preserved. For `.txt` files, use **File → Open Log File…** or choose **Open in LogLens** from the editor's context menu. Use the level toggles and search box to narrow the view.
 
 To open the tool window without a file, use the **Window → LogLens** menu entry.
 
@@ -80,7 +82,7 @@ src/
 │   │   ├── filter/      # LevelFilter
 │   │   ├── icons/       # Plugin icon loader
 │   │   ├── model/       # LogEntry, LogLevel, ThrowableInfo, StackFrame
-│   │   ├── parser/      # LogParser + SpringBootLogParser + PlainTextLogParser + ParserRegistry
+│   │   ├── parser/      # LogParser + JSON-lines, Spring Boot and plain-text parsers
 │   │   ├── search/      # LogSearch (plain / regex)
 │   │   ├── service/     # LogLensProjectService, FileReadingService
 │   │   ├── settings/    # PersistentStateComponent + Settings Configurable

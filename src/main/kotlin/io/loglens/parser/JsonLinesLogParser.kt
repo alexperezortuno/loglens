@@ -5,6 +5,7 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import io.loglens.model.LogEntry
 import io.loglens.model.LogLevel
+import io.loglens.exception.StackTraceDetector
 import io.loglens.util.AnsiCodes
 
 /** Parser for newline-delimited JSON log records. */
@@ -37,6 +38,7 @@ class JsonLinesLogParser : LogParser {
             raw = raw,
             lineNumber = lineNumber,
             metadata = metadata,
+            throwable = StackTraceDetector.parse(message) ?: StackTraceDetector.peek(message),
         )
     }
 

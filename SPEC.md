@@ -268,6 +268,11 @@ record text, and caps an individual record at 1 MiB. An oversized record is
 shown as a truncated preview while its remainder is skipped in cancellable
 chunks. Search and filtering apply to the records currently loaded.
 
+Advanced filters compose with level and text search using AND semantics:
+logger/thread includes and date/time bounds must match, while any exclusion
+term vetoes the record. Time-only timestamps are not assigned an invented date
+and therefore do not match an active date range.
+
 ---
 
 # 10. Tail mode

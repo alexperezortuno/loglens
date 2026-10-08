@@ -9,12 +9,14 @@ import com.intellij.openapi.vfs.VirtualFile
 import io.loglens.exception.StackTraceAssembler
 import io.loglens.model.LogEntry
 import io.loglens.parser.ParserRegistry
+import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.CancellationException
 import java.util.concurrent.CopyOnWriteArrayList
-import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.Future
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.TimeUnit
 
 /** Project-scoped bounded asynchronous log loading and current-view state. */
 @Service(Service.Level.PROJECT)
@@ -23,7 +25,7 @@ class LogLensProjectService(private val project: Project) : Disposable {
     private val log = logger<LogLensProjectService>()
     private val listeners = CopyOnWriteArrayList<(LogLensSnapshot) -> Unit>()
     private val lock = Any()
-    private val executor: ExecutorService = Executors.newSingleThreadExecutor { runnable ->
+    private val executor: ScheduledExecutorService = Executors.newScheduledThreadPool(1) { runnable ->
         Thread(runnable, "LogLens-file-reader").apply { isDaemon = true }
     }
 
@@ -60,13 +62,57 @@ class LogLensProjectService(private val project: Project) : Disposable {
         val loadingSnapshot: LogLensSnapshot
         synchronized(lock) {
             session = activeLoad ?: return
-            if (session.isLoading || !session.canLoadMore) return
+            if (session.isLoading || !session.canLoadMore || session.isTailing) return
             session.isLoading = true
             loadingSnapshot = session.toSnapshot()
             currentSnapshot = loadingSnapshot
         }
         dispatch(loadingSnapshot)
         schedulePage(session, firstPage = false)
+    }
+
+    /** Start following appended records, or resume a paused follow session. */
+    fun toggleTailing() {
+        val session: ActiveLoad
+        val snapshot: LogLensSnapshot
+        val shouldSchedule: Boolean
+        synchronized(lock) {
+            session = activeLoad ?: return
+            if (session.isTailing && !session.isTailPaused) {
+                session.isTailPaused = true
+                session.isLoading = false
+                session.task?.cancel(true)
+                session.statusMessage = "Follow paused."
+                shouldSchedule = false
+            } else {
+                session.isTailing = true
+                session.isTailPaused = false
+                session.canLoadMore = true
+                shouldSchedule = !session.isLoading
+                session.isLoading = true
+                session.statusMessage = "Following file…"
+            }
+            snapshot = session.toSnapshot()
+            currentSnapshot = snapshot
+        }
+        dispatch(snapshot)
+        if (shouldSchedule) schedulePage(session, firstPage = false)
+    }
+
+    /** Stop following while keeping the loaded records available. */
+    fun stopTailing() {
+        val snapshot: LogLensSnapshot
+        synchronized(lock) {
+            val session = activeLoad ?: return
+            session.isTailing = false
+            session.isTailPaused = false
+            session.isLoading = false
+            session.task?.cancel(true)
+            session.statusMessage = "Follow stopped."
+            snapshot = session.toSnapshot()
+            currentSnapshot = snapshot
+        }
+        dispatch(snapshot)
     }
 
     /** Cancel the active read without discarding the records already loaded. */
@@ -77,8 +123,13 @@ class LogLensProjectService(private val project: Project) : Disposable {
             if (!session.isLoading) return
             session.isLoading = false
             session.task?.cancel(true)
-            session.canLoadMore = session.totalBytes == null || session.nextByteOffset < session.totalBytes!!
-            session.statusMessage = "Loading cancelled."
+            if (session.isTailing) {
+                session.isTailPaused = true
+                session.statusMessage = "Follow paused."
+            } else {
+                session.canLoadMore = session.totalBytes == null || session.nextByteOffset < session.totalBytes!!
+                session.statusMessage = "Loading cancelled."
+            }
             snapshot = session.toSnapshot()
             currentSnapshot = snapshot
         }
@@ -97,6 +148,19 @@ class LogLensProjectService(private val project: Project) : Disposable {
     private fun schedulePage(session: ActiveLoad, firstPage: Boolean) {
         val future = executor.submit {
             try {
+                synchronized(lock) {
+                    if (session.isTailing && activeLoad === session && Files.size(session.path) < session.nextByteOffset) {
+                        session.nextByteOffset = 0
+                        session.nextLineNumber = 1
+                        session.startsInsideRecord = false
+                        session.registry.reset()
+                        session.stackTraceAssembler.reset()
+                        session.pendingPreview = null
+                        session.entries.clear()
+                        session.retainedBytes = 0
+                        session.statusMessage = "File was rotated; restarted from the beginning."
+                    }
+                }
                 val page = FileReadingService.readPage(
                     path = session.path,
                     startByteOffset = session.nextByteOffset,
@@ -105,6 +169,7 @@ class LogLensProjectService(private val project: Project) : Disposable {
                     maxEntries = if (firstPage) INITIAL_PAGE_ENTRIES else MORE_PAGE_ENTRIES,
                     maxRecordBytes = MAX_RECORD_BYTES,
                     startsInsideRecord = session.startsInsideRecord,
+                    completeRecordsOnly = session.isTailing,
                     isCancelled = { Thread.currentThread().isInterrupted || !isActive(session) },
                 )
 
@@ -117,7 +182,7 @@ class LogLensProjectService(private val project: Project) : Disposable {
                         .copy(isTruncated = record.truncated)
                     emitted += session.stackTraceAssembler.accept(entry)
                 }
-                if (!page.hasMore && !page.nextPageStartsInsideRecord) {
+                if (!page.hasMore && !page.nextPageStartsInsideRecord && !page.partialRecordWaiting) {
                     emitted += session.stackTraceAssembler.finish()
                 }
                 val pendingPreview = session.stackTraceAssembler.preview()
@@ -136,9 +201,8 @@ class LogLensProjectService(private val project: Project) : Disposable {
                     val pendingBytes = pendingPreview?.let(::estimateRetainedBytes) ?: 0L
                     for (entry in emitted) {
                         val estimatedBytes = estimateRetainedBytes(entry)
-                        if (acceptedEntries.size + 1 + (if (pendingPreview != null) 1 else 0) > MAX_RETAINED_ENTRIES ||
-                            retainedBytes + estimatedBytes + pendingBytes > MAX_RETAINED_BYTES
-                        ) {
+                        if (!session.isTailing && (acceptedEntries.size + 1 + (if (pendingPreview != null) 1 else 0) > MAX_RETAINED_ENTRIES ||
+                            retainedBytes + estimatedBytes + pendingBytes > MAX_RETAINED_BYTES)) {
                             retentionLimitReached = true
                             break
                         }
@@ -146,12 +210,21 @@ class LogLensProjectService(private val project: Project) : Disposable {
                         retainedBytes += estimatedBytes
                     }
                     if (!retentionLimitReached && pendingPreview != null) {
-                        if (acceptedEntries.size + 1 > MAX_RETAINED_ENTRIES ||
-                            retainedBytes + pendingBytes > MAX_RETAINED_BYTES
-                        ) {
+                        if (!session.isTailing && (acceptedEntries.size + 1 > MAX_RETAINED_ENTRIES ||
+                            retainedBytes + pendingBytes > MAX_RETAINED_BYTES)) {
                             retentionLimitReached = true
                         } else {
                             retainedBytes += pendingBytes
+                        }
+                    }
+                    if (session.isTailing && !retentionLimitReached) {
+                        while (acceptedEntries.size + (if (pendingPreview != null) 1 else 0) > MAX_RETAINED_ENTRIES ||
+                            retainedBytes > MAX_RETAINED_BYTES) {
+                            if (acceptedEntries.isEmpty()) {
+                                retentionLimitReached = true
+                                break
+                            }
+                            retainedBytes -= estimateRetainedBytes(acceptedEntries.removeAt(0))
                         }
                     }
                     if (retentionLimitReached) {
@@ -163,7 +236,7 @@ class LogLensProjectService(private val project: Project) : Disposable {
                     session.entries.clear()
                     session.entries.addAll(acceptedEntries)
                     session.retainedBytes = retainedBytes
-                    if (retentionLimitReached || (page.hasMore && (
+                    if (retentionLimitReached || (!session.isTailing && page.hasMore && (
                             session.entries.size >= MAX_RETAINED_ENTRIES ||
                                 session.retainedBytes >= MAX_RETAINED_BYTES
                             ))
@@ -171,10 +244,14 @@ class LogLensProjectService(private val project: Project) : Disposable {
                         session.canLoadMore = false
                         session.statusMessage = "The viewer's memory limit was reached; loading stopped."
                         session.isLoading = false
-                    } else if (page.nextPageStartsInsideRecord) {
+                    } else if (page.nextPageStartsInsideRecord && !session.isTailing) {
                         session.canLoadMore = page.hasMore
                         session.statusMessage = "Skipping the remainder of an oversized record…"
                         session.isLoading = page.hasMore
+                    } else if (session.isTailing) {
+                        session.canLoadMore = true
+                        session.isLoading = page.hasMore && !page.partialRecordWaiting
+                        session.statusMessage = "Following file…"
                     } else {
                         session.canLoadMore = page.hasMore
                         if (!page.hasMore) session.statusMessage = "End of file."
@@ -184,7 +261,11 @@ class LogLensProjectService(private val project: Project) : Disposable {
                     currentSnapshot = result
                 }
                 dispatch(result)
-                if (result.isLoading) schedulePage(session, firstPage = false)
+                if (result.isLoading) {
+                    schedulePage(session, firstPage = false)
+                } else if (result.isTailing && !result.isTailPaused) {
+                    scheduleTailPoll(session)
+                }
             } catch (_: CancellationException) {
                 // A newer file request superseded this page.
             } catch (error: Exception) {
@@ -201,6 +282,23 @@ class LogLensProjectService(private val project: Project) : Disposable {
                 dispatch(result)
             }
         }
+        synchronized(lock) {
+            if (activeLoad === session) session.task = future else future.cancel(true)
+        }
+    }
+
+    private fun scheduleTailPoll(session: ActiveLoad) {
+        val future = executor.schedule({
+            val snapshot: LogLensSnapshot
+            synchronized(lock) {
+                if (activeLoad !== session || !session.isTailing || session.isTailPaused) return@schedule
+                session.isLoading = true
+                snapshot = session.toSnapshot()
+                currentSnapshot = snapshot
+            }
+            dispatch(snapshot)
+            schedulePage(session, firstPage = false)
+        }, TAIL_POLL_MILLIS, TimeUnit.MILLISECONDS)
         synchronized(lock) {
             if (activeLoad === session) session.task = future else future.cancel(true)
         }
@@ -247,6 +345,8 @@ class LogLensProjectService(private val project: Project) : Disposable {
         val stackTraceAssembler = StackTraceAssembler()
         val entries = mutableListOf<LogEntry>()
         var pendingPreview: LogEntry? = null
+        var isTailing: Boolean = false
+        var isTailPaused: Boolean = false
         var nextByteOffset: Long = 0
         var nextLineNumber: Int = 1
         var startsInsideRecord: Boolean = false
@@ -263,6 +363,8 @@ class LogLensProjectService(private val project: Project) : Disposable {
             entries = if (pendingPreview == null) entries.toList() else entries + pendingPreview!!,
             isLoading = isLoading,
             canLoadMore = canLoadMore,
+            isTailing = isTailing,
+            isTailPaused = isTailPaused,
             bytesRead = bytesRead,
             totalBytes = totalBytes,
             statusMessage = statusMessage,
@@ -275,6 +377,8 @@ class LogLensProjectService(private val project: Project) : Disposable {
         val entries: List<LogEntry>,
         val isLoading: Boolean = false,
         val canLoadMore: Boolean = false,
+        val isTailing: Boolean = false,
+        val isTailPaused: Boolean = false,
         val bytesRead: Long = 0,
         val totalBytes: Long? = null,
         val statusMessage: String? = null,
@@ -293,5 +397,6 @@ class LogLensProjectService(private val project: Project) : Disposable {
         const val MAX_RETAINED_BYTES = 32L * 1024 * 1024
         const val MAX_RECORD_BYTES = 1024 * 1024
         const val ENTRY_OBJECT_OVERHEAD_BYTES = 256L
+        const val TAIL_POLL_MILLIS = 1_000L
     }
 }

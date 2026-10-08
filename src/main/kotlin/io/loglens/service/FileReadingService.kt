@@ -39,6 +39,7 @@ object FileReadingService {
         val fileSize: Long,
         val hasMore: Boolean,
         val nextPageStartsInsideRecord: Boolean,
+        val partialRecordWaiting: Boolean,
     )
 
     /** Read one bounded page from [path], starting at the first unread byte. */
@@ -50,6 +51,7 @@ object FileReadingService {
         maxEntries: Int,
         maxRecordBytes: Int,
         startsInsideRecord: Boolean = false,
+        completeRecordsOnly: Boolean = false,
         isCancelled: () -> Boolean = { Thread.currentThread().isInterrupted },
     ): LinePage {
         require(startByteOffset >= 0) { "startByteOffset must not be negative" }
@@ -67,6 +69,7 @@ object FileReadingService {
                 var bytesRead = 0L
                 var nextLineNumber = firstLineNumber
                 var insideRecord = startsInsideRecord
+                var partialRecordWaiting = false
 
                 if (insideRecord) {
                     val skipped = skipToRecordEnd(
@@ -89,8 +92,26 @@ object FileReadingService {
                         isCancelled = isCancelled,
                     ) ?: break
 
-                    bytesRead += line.bytesConsumed
-                    insideRecord = line.truncated
+                    if (completeRecordsOnly && !line.terminatedByNewline) {
+                        if (!line.truncated) {
+                            partialRecordWaiting = true
+                            break
+                        }
+                        val skipped = skipToRecordEnd(
+                            input = input,
+                            maxBytes = maxPageBytes - line.bytesConsumed,
+                            remainingFileBytes = fileSize - recordStart - line.bytesConsumed,
+                            isCancelled = isCancelled,
+                        )
+                        if (!skipped.reachedRecordEnd) {
+                            partialRecordWaiting = true
+                            break
+                        }
+                        bytesRead += line.bytesConsumed + skipped.bytesConsumed
+                    } else {
+                        bytesRead += line.bytesConsumed
+                    }
+                    insideRecord = line.truncated && !(completeRecordsOnly && !line.terminatedByNewline)
                     records += BoundedLine(
                         text = line.text,
                         lineNumber = nextLineNumber,
@@ -120,6 +141,7 @@ object FileReadingService {
                     fileSize = fileSize,
                     hasMore = nextByteOffset < fileSize,
                     nextPageStartsInsideRecord = insideRecord,
+                    partialRecordWaiting = partialRecordWaiting,
                 )
             }
         }
@@ -129,6 +151,7 @@ object FileReadingService {
         val text: String,
         val bytesConsumed: Long,
         val truncated: Boolean,
+        val terminatedByNewline: Boolean,
     )
 
     private data class SkipResult(val bytesConsumed: Long, val reachedRecordEnd: Boolean)
@@ -163,6 +186,7 @@ object FileReadingService {
         var bytesConsumed = 0L
         var hasContent = false
         var truncated = false
+        var terminatedByNewline = false
 
         while (bytesConsumed < remainingFileBytes) {
             if (bytesConsumed % 4096L == 0L && isCancelled()) {
@@ -173,6 +197,7 @@ object FileReadingService {
             bytesConsumed++
             if (next == '\n'.code) {
                 hasContent = true
+                terminatedByNewline = true
                 break
             }
             hasContent = true
@@ -191,6 +216,7 @@ object FileReadingService {
             text = String(bytes, 0, contentLength, StandardCharsets.UTF_8),
             bytesConsumed = bytesConsumed,
             truncated = truncated,
+            terminatedByNewline = terminatedByNewline,
         )
     }
 

@@ -62,6 +62,22 @@ After the plugin is installed and the IDE restarted, open `.log`, `.out`, or `.t
 
 To open the tool window without a file, use the **Window → LogLens** menu entry.
 
+## Observability Example
+
+LogLens normalizes common correlation fields from JSON logs and key/value text:
+
+```json
+{"timestamp":"2026-10-07T12:00:01.120Z","level":"INFO","message":"charging payment","trace_id":"f84a91","span_id":"a12b","requestId":"req-42","service.name":"payments","host":"node-a","container.id":"payments-1"}
+```
+
+Open the file in LogLens, then enter `f84a91` in the **Trace/Request** filter. The viewer keeps only records matching `traceId`, `spanId`, or `requestId`; the normalized fields are also available in the record metadata and regular search index. The same filter works with plain text records such as:
+
+```text
+2026-10-07 12:00:01.120 INFO traceId=f84a91 spanId=a12b service=payments charged payment
+```
+
+Save the filter as a preset with **Save** to reuse it for another log file.
+
 ## Development
 
 ```bash

@@ -36,6 +36,7 @@ class LogLensFileEditor(
     init {
         viewer.setLoadMoreAction(service::loadMore)
         viewer.setCancelLoadAction(service::cancelLoad)
+        viewer.setTailAction(service::toggleTailing)
         viewer.setStackFrameNavigationHandler { frame, _ -> StackFrameNavigator.navigate(project, frame) }
         service.addListener(snapshotListener)
         viewer.update(service.snapshot().takeIf { it.path == filePath } ?: LogLensSnapshot.empty())

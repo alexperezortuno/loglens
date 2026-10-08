@@ -72,19 +72,20 @@ interface LogParser {
 
 Parser implementations must remain independent from the UI.
 
-Initial parsers:
+Implemented parsers:
 
 ```text
 PlainTextLogParser
 SpringBootLogParser
+LogbackLogParser
+Log4jLogParser
+JsonLinesLogParser
+TimestampLevelLogParser
 ```
 
 Planned:
 
 ```text
-LogbackLogParser
-Log4jLogParser
-JsonLogParser
 DockerLogParser
 NginxLogParser
 ```
@@ -99,10 +100,11 @@ line
  ▼
 ParserRegistry
  │
- ├─ SpringBootLogParser
- ├─ LogbackLogParser
- ├─ JsonLogParser
- └─ PlainTextLogParser
+  ├─ JsonLinesLogParser
+  ├─ SpringBootLogParser
+  ├─ LogbackLogParser
+  ├─ Log4jLogParser
+  └─ PlainTextLogParser
 ```
 
 `PlainTextLogParser` should act as the fallback.
@@ -266,11 +268,21 @@ record text, and caps an individual record at 1 MiB. An oversized record is
 shown as a truncated preview while its remainder is skipped in cancellable
 chunks. Search and filtering apply to the records currently loaded.
 
+Advanced filters compose with level and text search using AND semantics:
+logger/thread includes and date/time bounds must match, while any exclusion
+term vetoes the record. Time-only timestamps are not assigned an invented date
+and therefore do not match an active date range.
+
 ---
 
 # 10. Tail mode
 
-Future versions should support following files being actively written.
+LogLens can follow files being actively written. It polls from the current
+byte offset, ignores incomplete final records until a newline arrives, and
+restarts from the beginning when the file is truncated or rotated. Follow
+mode supports pause/resume, automatic scrolling when the user is already at
+the bottom, a new-entry indicator otherwise, and evicts the oldest records at
+the bounded retention limit.
 
 Equivalent concept:
 

@@ -132,15 +132,15 @@ Goal:
 ### Formats
 
 - [x] Newline-delimited JSON logs
-- [ ] Logback
-- [ ] Log4j
+- [x] Logback
+- [x] Log4j
 
 ### Large files
 
 - [x] Incremental background parsing and paging
 - [x] Lazy list rendering
 - [x] Bounded in-memory cache
-- [ ] Background indexing
+- [x] Background indexing
 
 Target:
 
@@ -151,19 +151,19 @@ Target:
 
 ### Tail mode
 
-- [ ] Follow active files
-- [ ] Detect appended content
-- [ ] Pause/resume
-- [ ] Auto-scroll
-- [ ] New-entry indicator
+- [x] Follow active files
+- [x] Detect appended content
+- [x] Pause/resume
+- [x] Auto-scroll
+- [x] New-entry indicator
 
 ### Filters
 
-- [ ] Logger filter
-- [ ] Thread filter
-- [ ] Date/time range
-- [ ] Exclusion filters
-- [ ] Saved filters
+- [x] Logger filter
+- [x] Thread filter
+- [x] Date/time range
+- [x] Exclusion filters
+- [x] Saved filters
 
 ---
 

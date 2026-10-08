@@ -196,7 +196,7 @@ PaymentService
 Database
 ```
 
-- [ ] Group by trace
+- [x] Group by trace
 - [x] Search by correlation ID
 - [ ] Visualize related events
 - [ ] Time delta between events

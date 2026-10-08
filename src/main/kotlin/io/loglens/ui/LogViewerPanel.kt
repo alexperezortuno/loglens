@@ -151,17 +151,35 @@ class LogViewerPanel {
     private val loadStatus = JLabel("Open a log file")
     private var loadMoreAction: (() -> Unit)? = null
     private var cancelLoadAction: (() -> Unit)? = null
+    private var tailAction: (() -> Unit)? = null
     private var lastSnapshot: LogLensSnapshot = LogLensSnapshot.empty()
+    private var newEntriesCount = 0
     private val loadMoreButton = JButton("Load more").apply {
         isEnabled = false
         addActionListener {
             if (lastSnapshot.isLoading) cancelLoadAction?.invoke() else loadMoreAction?.invoke()
         }
     }
+    private val followButton = JButton("Follow").apply {
+        addActionListener { tailAction?.invoke() }
+    }
+    private val newEntriesButton = JButton().apply {
+        isVisible = false
+        addActionListener {
+            newEntriesCount = 0
+            isVisible = false
+            scrollToBottom()
+        }
+    }
     private val loadControls = JPanel(BorderLayout(8, 0)).apply {
         border = BorderFactory.createEmptyBorder(6, 10, 6, 10)
         add(loadStatus, BorderLayout.CENTER)
-        add(loadMoreButton, BorderLayout.EAST)
+        add(JPanel(FlowLayout(FlowLayout.RIGHT, 6, 0)).apply {
+            isOpaque = false
+            add(newEntriesButton)
+            add(followButton)
+            add(loadMoreButton)
+        }, BorderLayout.EAST)
     }
     val component: JBPanel<JBPanel<*>> = JBPanel<JBPanel<*>>(BorderLayout()).apply {
         add(loadControls, BorderLayout.NORTH)
@@ -179,10 +197,16 @@ class LogViewerPanel {
     private var search: LogSearch = LogSearch.EMPTY
 
     fun update(snapshot: LogLensSnapshot) {
+        val wasAtBottom = isAtBottom()
+        if (snapshot.isTailing && snapshot.entries.size > source.size && !wasAtBottom) {
+            newEntriesCount += snapshot.entries.size - source.size
+        }
         lastSnapshot = snapshot
         source = snapshot.entries
         updateLoadStatus(snapshot)
         refresh()
+        if (snapshot.isTailing && wasAtBottom) scrollToBottom()
+        updateNewEntriesButton()
     }
 
     fun setLoadMoreAction(action: (() -> Unit)?) {
@@ -192,6 +216,11 @@ class LogViewerPanel {
 
     fun setCancelLoadAction(action: (() -> Unit)?) {
         cancelLoadAction = action
+        updateLoadStatus(lastSnapshot)
+    }
+
+    fun setTailAction(action: (() -> Unit)?) {
+        tailAction = action
         updateLoadStatus(lastSnapshot)
     }
 
@@ -381,11 +410,33 @@ class LogViewerPanel {
             snapshot.statusMessage?.let(::add)
         }.joinToString("    ·    ")
         loadMoreButton.text = if (snapshot.isLoading) "Cancel" else "Load more"
-        loadMoreButton.isEnabled = if (snapshot.isLoading) {
+        loadMoreButton.isVisible = !snapshot.isTailing
+        loadMoreButton.isEnabled = if (snapshot.isLoading && !snapshot.isTailing) {
             cancelLoadAction != null
         } else {
             loadMoreAction != null && snapshot.canLoadMore
         }
+        followButton.text = when {
+            !snapshot.isTailing -> "Follow"
+            snapshot.isTailPaused -> "Resume"
+            else -> "Pause"
+        }
+        followButton.isEnabled = tailAction != null
+    }
+
+    private fun updateNewEntriesButton() {
+        newEntriesButton.text = if (newEntriesCount > 0) "$newEntriesCount new entries" else ""
+        newEntriesButton.isVisible = newEntriesCount > 0
+    }
+
+    private fun isAtBottom(): Boolean {
+        val bar = scrollPane.verticalScrollBar
+        return bar.value + bar.visibleAmount >= bar.maximum - 4
+    }
+
+    private fun scrollToBottom() {
+        if (listModel.isEmpty) return
+        listComponent.scrollRectToVisible(listComponent.getCellBounds(listModel.size - 1, listModel.size - 1))
     }
 
     private fun formatBytes(bytes: Long): String = when {

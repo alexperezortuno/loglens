@@ -22,6 +22,6 @@ class LogLensFileEditorProvider : FileEditorProvider, DumbAware {
 
     private companion object {
         const val EDITOR_TYPE_ID = "io.loglens.fileEditor"
-        val SUPPORTED_EXTENSIONS = setOf("log", "out")
+        val SUPPORTED_EXTENSIONS = setOf("log", "out", "txt")
     }
 }

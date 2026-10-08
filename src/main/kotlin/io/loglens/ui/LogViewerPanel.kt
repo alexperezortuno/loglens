@@ -8,6 +8,7 @@ import com.intellij.ui.components.JBScrollPane
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonParser
 import io.loglens.filter.LevelFilter
+import io.loglens.filter.AdvancedFilter
 import io.loglens.model.LogEntry
 import io.loglens.model.LogLevel
 import io.loglens.model.StackFrame
@@ -194,6 +195,7 @@ class LogViewerPanel {
 
     private var source: List<LogEntry> = emptyList()
     private var filter: LevelFilter = LevelFilter()
+    private var advancedFilter: AdvancedFilter = AdvancedFilter.EMPTY
     private var search: LogSearch = LogSearch.EMPTY
 
     fun update(snapshot: LogLensSnapshot) {
@@ -238,12 +240,18 @@ class LogViewerPanel {
         refresh()
     }
 
+    fun updateAdvancedFilter(filter: AdvancedFilter) {
+        advancedFilter = filter
+        refresh()
+    }
+
     private fun refresh() {
         val selectedIdentity = listComponent.selectedValue?.identity()
         listModel.clear()
         val visibleEntries = source
             .asSequence()
             .filter { filter.isAllowed(it) }
+            .filter { advancedFilter.matches(it) }
             .filter { search.matches(it) }
             .toList()
         listModel.addAll(visibleEntries)
@@ -258,7 +266,7 @@ class LogViewerPanel {
 
     /** Exposed for tests that want to inspect the filtered set without going through Swing. */
     internal fun visible(): List<LogEntry> =
-        source.filter { filter.isAllowed(it) && search.matches(it) }
+        source.filter { filter.isAllowed(it) && advancedFilter.matches(it) && search.matches(it) }
 
     private fun showDetails(entry: LogEntry?) {
         selectedEntry = entry

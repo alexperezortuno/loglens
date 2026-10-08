@@ -27,6 +27,7 @@ The technical specification lives in [SPEC.md](SPEC.md) and the iteration plan i
 - Advanced filters for logger, thread, inclusive date/time range, exclusions, and saved presets.
 - **Trace grouping** with a **Group by trace** toggle for related events that share a `traceId`.
 - **Trace timeline** showing related events, service/logger context, and elapsed time between events.
+- **Statistics** for loaded records: levels over time, ERROR/FATAL frequency, common exceptions, and active loggers.
 - **Search** with plain text, case-sensitive option, and **regular expression** mode; composable with the level filter.
 - **Grouped Java/Kotlin exceptions** with parsed causes, suppressed exceptions, clickable source frames, and source navigation.
 - Copy complete exceptions or individual frames from the exception detail pane.

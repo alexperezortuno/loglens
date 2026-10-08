@@ -25,7 +25,7 @@ class LogLensProjectService(private val project: Project) : Disposable {
     private val log = logger<LogLensProjectService>()
     private val listeners = CopyOnWriteArrayList<(LogLensSnapshot) -> Unit>()
     private val lock = Any()
-    private val executor: ScheduledExecutorService = Executors.newScheduledThreadPool(1) { runnable ->
+    private val executor: ScheduledExecutorService = Executors.newScheduledThreadPool(2) { runnable ->
         Thread(runnable, "LogLens-file-reader").apply { isDaemon = true }
     }
 
@@ -47,6 +47,7 @@ class LogLensProjectService(private val project: Project) : Disposable {
         val initial: LogLensSnapshot
         synchronized(lock) {
             activeLoad?.task?.cancel(true)
+            activeLoad?.indexTask?.cancel(true)
             session = ActiveLoad(path)
             activeLoad = session
             initial = session.toSnapshot()
@@ -54,6 +55,7 @@ class LogLensProjectService(private val project: Project) : Disposable {
         }
         dispatch(initial)
         schedulePage(session, firstPage = true)
+        scheduleIndex(session)
     }
 
     /** Load the next bounded page for the currently open log. */
@@ -158,6 +160,7 @@ class LogLensProjectService(private val project: Project) : Disposable {
                         session.pendingPreview = null
                         session.entries.clear()
                         session.retainedBytes = 0
+                        session.index.clear()
                         session.statusMessage = "File was rotated; restarted from the beginning."
                     }
                 }
@@ -180,6 +183,7 @@ class LogLensProjectService(private val project: Project) : Disposable {
                     }
                     val entry = session.registry.parse(record.text, record.lineNumber)
                         .copy(isTruncated = record.truncated)
+                    session.index.add(record.startByte, record.endByte, entry)
                     emitted += session.stackTraceAssembler.accept(entry)
                 }
                 if (!page.hasMore && !page.nextPageStartsInsideRecord && !page.partialRecordWaiting) {
@@ -191,6 +195,7 @@ class LogLensProjectService(private val project: Project) : Disposable {
                 synchronized(lock) {
                     if (activeLoad !== session || !session.isLoading || Thread.currentThread().isInterrupted) return@submit
                     session.totalBytes = page.fileSize
+                    session.index.setFileSize(page.fileSize)
                     session.bytesRead = page.nextByteOffset
                     session.nextByteOffset = page.nextByteOffset
                     session.nextLineNumber = page.nextLineNumber
@@ -304,6 +309,62 @@ class LogLensProjectService(private val project: Project) : Disposable {
         }
     }
 
+    /** Build the compact metadata index independently of the bounded viewer cache. */
+    private fun scheduleIndex(session: ActiveLoad) {
+        val future = executor.submit {
+            val registry = ParserRegistry.defaults()
+            var offset = 0L
+            var lineNumber = 1
+            var insideRecord = false
+            try {
+                while (isIndexActive(session)) {
+                    val page = FileReadingService.readPage(
+                        path = session.path,
+                        startByteOffset = offset,
+                        firstLineNumber = lineNumber,
+                        maxPageBytes = INDEX_PAGE_BYTES,
+                        maxEntries = INDEX_PAGE_ENTRIES,
+                        maxRecordBytes = MAX_RECORD_BYTES,
+                        startsInsideRecord = insideRecord,
+                        isCancelled = { Thread.currentThread().isInterrupted || !isIndexActive(session) },
+                    )
+                    session.index.setFileSize(page.fileSize)
+                    page.records.forEach { record ->
+                        val entry = registry.parse(record.text, record.lineNumber)
+                            .copy(isTruncated = record.truncated)
+                        session.index.add(record.startByte, record.endByte, entry)
+                    }
+                    publishIndexProgress(session)
+                    offset = page.nextByteOffset
+                    lineNumber = page.nextLineNumber
+                    insideRecord = page.nextPageStartsInsideRecord
+                    if (!page.hasMore || page.partialRecordWaiting) break
+                }
+            } catch (_: CancellationException) {
+                // A newer file request superseded this index build.
+            } catch (error: Exception) {
+                log.warn("Unable to index log file ${session.path}", error)
+            }
+        }
+        synchronized(lock) {
+            if (activeLoad === session) session.indexTask = future else future.cancel(true)
+        }
+    }
+
+    private fun isIndexActive(session: ActiveLoad): Boolean = synchronized(lock) {
+        activeLoad === session
+    }
+
+    private fun publishIndexProgress(session: ActiveLoad) {
+        val snapshot: LogLensSnapshot
+        synchronized(lock) {
+            if (activeLoad !== session) return
+            snapshot = session.toSnapshot()
+            currentSnapshot = snapshot
+        }
+        dispatch(snapshot)
+    }
+
     private fun isActive(session: ActiveLoad): Boolean = synchronized(lock) {
         activeLoad === session && session.isLoading
     }
@@ -332,6 +393,7 @@ class LogLensProjectService(private val project: Project) : Disposable {
     override fun dispose() {
         synchronized(lock) {
             activeLoad?.task?.cancel(true)
+            activeLoad?.indexTask?.cancel(true)
             activeLoad = null
         }
         executor.shutdownNow()
@@ -343,6 +405,7 @@ class LogLensProjectService(private val project: Project) : Disposable {
     ) {
         val registry: ParserRegistry = ParserRegistry.defaults()
         val stackTraceAssembler = StackTraceAssembler()
+        val index = LogIndex()
         val entries = mutableListOf<LogEntry>()
         var pendingPreview: LogEntry? = null
         var isTailing: Boolean = false
@@ -357,6 +420,7 @@ class LogLensProjectService(private val project: Project) : Disposable {
         var canLoadMore: Boolean = true
         var statusMessage: String? = null
         var task: Future<*>? = null
+        var indexTask: Future<*>? = null
 
         fun toSnapshot(): LogLensSnapshot = LogLensSnapshot(
             path = path,
@@ -368,6 +432,8 @@ class LogLensProjectService(private val project: Project) : Disposable {
             bytesRead = bytesRead,
             totalBytes = totalBytes,
             statusMessage = statusMessage,
+            indexedEntries = index.size(),
+            indexedBytes = index.indexedBytes,
         )
     }
 
@@ -382,6 +448,8 @@ class LogLensProjectService(private val project: Project) : Disposable {
         val bytesRead: Long = 0,
         val totalBytes: Long? = null,
         val statusMessage: String? = null,
+        val indexedEntries: Int = 0,
+        val indexedBytes: Long = 0,
     ) {
         companion object {
             fun empty(): LogLensSnapshot = LogLensSnapshot(path = null, entries = emptyList())
@@ -398,5 +466,7 @@ class LogLensProjectService(private val project: Project) : Disposable {
         const val MAX_RECORD_BYTES = 1024 * 1024
         const val ENTRY_OBJECT_OVERHEAD_BYTES = 256L
         const val TAIL_POLL_MILLIS = 1_000L
+        const val INDEX_PAGE_BYTES = 4L * 1024 * 1024
+        const val INDEX_PAGE_ENTRIES = 5_000
     }
 }

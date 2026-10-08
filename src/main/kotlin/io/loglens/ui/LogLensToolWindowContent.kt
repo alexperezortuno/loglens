@@ -31,6 +31,7 @@ class LogLensToolWindowContent(private val project: Project) {
         val service = project.getService(LogLensProjectService::class.java) ?: return
         viewer.setLoadMoreAction(service::loadMore)
         viewer.setCancelLoadAction(service::cancelLoad)
+        viewer.setTailAction(service::toggleTailing)
         viewer.setStackFrameNavigationHandler { frame, _ -> StackFrameNavigator.navigate(project, frame) }
         // Apply current snapshot immediately in case the project already had one.
         service.snapshot().let { viewer.update(it) }

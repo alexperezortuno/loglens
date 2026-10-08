@@ -169,4 +169,28 @@ class FileReadingServiceTest {
             Files.deleteIfExists(path)
         }
     }
+
+    @Test
+    fun `readPage leaves an incomplete final record for tail mode`() {
+        val path = Files.createTempFile("loglens-tail", ".log")
+        try {
+            Files.writeString(path, "complete\npartial", StandardCharsets.UTF_8)
+            val first = FileReadingService.readPage(
+                path = path,
+                startByteOffset = 0,
+                firstLineNumber = 1,
+                maxPageBytes = 1024,
+                maxEntries = 10,
+                maxRecordBytes = 1024,
+                completeRecordsOnly = true,
+            )
+
+            assertEquals(listOf("complete"), first.records.map { it.text })
+            assertTrue(first.partialRecordWaiting)
+            assertEquals(2, first.nextLineNumber)
+            assertEquals(9, first.nextByteOffset)
+        } finally {
+            Files.deleteIfExists(path)
+        }
+    }
 }

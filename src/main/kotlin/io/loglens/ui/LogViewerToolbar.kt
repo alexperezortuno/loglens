@@ -36,6 +36,7 @@ class LogViewerToolbar(
     private val loggerField: JTextField = JTextField(8)
     private val threadField: JTextField = JTextField(8)
     private val correlationField: JTextField = JTextField(10)
+    private val groupTraceToggle: JCheckBox = JCheckBox("Group by trace")
     private val excludeField: JTextField = JTextField(8)
     private val fromField: JTextField = JTextField(16)
     private val toField: JTextField = JTextField(16)
@@ -98,6 +99,7 @@ class LogViewerToolbar(
         searchButton.addActionListener { onSearchChanged() }
         clearButton.addActionListener { onClear() }
         applyAdvancedButton.addActionListener { onAdvancedChanged() }
+        groupTraceToggle.addActionListener { viewer.updateGroupByTrace(groupTraceToggle.isSelected) }
         saveFilterButton.addActionListener { saveCurrentPreset() }
         presetCombo.addActionListener { applySelectedPreset() }
         populatePresets()
@@ -150,6 +152,7 @@ class LogViewerToolbar(
             add(threadField)
             add(javax.swing.JLabel("Trace/Request"))
             add(correlationField)
+            add(groupTraceToggle)
         add(javax.swing.JLabel("Exclude"))
         add(excludeField)
         add(javax.swing.JLabel("From"))

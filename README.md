@@ -25,6 +25,7 @@ The technical specification lives in [SPEC.md](SPEC.md) and the iteration plan i
 - `LogEntry`, `LogLevel` and `ThrowableInfo` domain types shared by every parser.
 - **Level filter** toggles for `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR`, `FATAL`, and `UNKNOWN` entries.
 - Advanced filters for logger, thread, inclusive date/time range, exclusions, and saved presets.
+- **Trace grouping** with a **Group by trace** toggle for related events that share a `traceId`.
 - **Search** with plain text, case-sensitive option, and **regular expression** mode; composable with the level filter.
 - **Grouped Java/Kotlin exceptions** with parsed causes, suppressed exceptions, clickable source frames, and source navigation.
 - Copy complete exceptions or individual frames from the exception detail pane.

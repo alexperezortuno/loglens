@@ -25,6 +25,9 @@ The technical specification lives in [SPEC.md](SPEC.md) and the iteration plan i
 - `LogEntry`, `LogLevel` and `ThrowableInfo` domain types shared by every parser.
 - **Level filter** toggles for `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR`, `FATAL`, and `UNKNOWN` entries.
 - Advanced filters for logger, thread, inclusive date/time range, exclusions, and saved presets.
+- **Trace grouping** with a **Group by trace** toggle for related events that share a `traceId`.
+- **Trace timeline** showing related events, service/logger context, and elapsed time between events.
+- **Statistics** for loaded records: levels over time, ERROR/FATAL frequency, common exceptions, and active loggers.
 - **Search** with plain text, case-sensitive option, and **regular expression** mode; composable with the level filter.
 - **Grouped Java/Kotlin exceptions** with parsed causes, suppressed exceptions, clickable source frames, and source navigation.
 - Copy complete exceptions or individual frames from the exception detail pane.
@@ -61,6 +64,22 @@ The resulting distribution ZIP is written to `build/distributions/`. Install it 
 After the plugin is installed and the IDE restarted, open `.log`, `.out`, or `.txt` files normally; LogLens starts at the beginning and loads a bounded page in the background. Choose **Load more** to continue, or **Cancel** to stop the current read. Use **Follow** to watch appended records, **Pause** to stop polling, and **Resume** to continue. Oversized records show a truncated preview while their remaining bytes are skipped in cancellable chunks. The viewer keeps a bounded in-memory record window and reports when its retention limit is reached. Search and filters apply to records currently loaded. ANSI colors and JSON metadata are preserved. Select an exception to inspect its frames; click a source frame to navigate, or use the copy buttons. **File → Open Log File…** and **Open in LogLens** remain available for explicit loading.
 
 To open the tool window without a file, use the **Window → LogLens** menu entry.
+
+## Observability Example
+
+LogLens normalizes common correlation fields from JSON logs and key/value text:
+
+```json
+{"timestamp":"2026-10-07T12:00:01.120Z","level":"INFO","message":"charging payment","trace_id":"f84a91","span_id":"a12b","requestId":"req-42","service.name":"payments","host":"node-a","container.id":"payments-1"}
+```
+
+Open the file in LogLens, then enter `f84a91` in the **Trace/Request** filter. The viewer keeps only records matching `traceId`, `spanId`, or `requestId`; the normalized fields are also available in the record metadata and regular search index. The same filter works with plain text records such as:
+
+```text
+2026-10-07 12:00:01.120 INFO traceId=f84a91 spanId=a12b service=payments charged payment
+```
+
+Save the filter as a preset with **Save** to reuse it for another log file.
 
 ## Development
 

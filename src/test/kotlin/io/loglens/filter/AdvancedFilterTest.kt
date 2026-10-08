@@ -36,6 +36,20 @@ class AdvancedFilterTest {
     }
 
     @Test
+    fun `correlation filter matches trace span and request identifiers`() {
+        val entry = LogEntry(
+            message = "charged",
+            raw = "charged",
+            metadata = mapOf("traceId" to "trace-42", "spanId" to "span-7", "requestId" to "req-9"),
+        )
+
+        assertTrue(AdvancedFilter(correlationContains = "trace-42").matches(entry))
+        assertTrue(AdvancedFilter(correlationContains = "span-7").matches(entry))
+        assertTrue(AdvancedFilter(correlationContains = "req-9").matches(entry))
+        assertFalse(AdvancedFilter(correlationContains = "missing").matches(entry))
+    }
+
+    @Test
     fun `time range does not invent dates for time-only timestamps`() {
         val filter = AdvancedFilter(fromTimestamp = "2026-01-05")
 

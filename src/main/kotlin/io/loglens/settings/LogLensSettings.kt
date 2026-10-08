@@ -44,6 +44,7 @@ class LogLensSettings : PersistentStateComponent<LogLensSettings.State> {
         var name: String = "",
         var loggerContains: String = "",
         var threadContains: String = "",
+        var correlationContains: String = "",
         var excludeTerms: String = "",
         var fromTimestamp: String = "",
         var toTimestamp: String = "",

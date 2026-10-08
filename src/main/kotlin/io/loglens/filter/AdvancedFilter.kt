@@ -8,6 +8,7 @@ import io.loglens.util.Timestamps
 data class AdvancedFilter(
     val loggerContains: String = "",
     val threadContains: String = "",
+    val correlationContains: String = "",
     val excludeTerms: String = "",
     val fromTimestamp: String = "",
     val toTimestamp: String = "",
@@ -19,6 +20,12 @@ data class AdvancedFilter(
         }
         if (threadContains.isNotBlank() && !entry.thread.orEmpty().contains(threadContains.trim(), ignoreCase = true)) {
             return false
+        }
+        if (correlationContains.isNotBlank()) {
+            val value = listOf("traceId", "spanId", "requestId")
+                .mapNotNull(entry.metadata::get)
+                .any { it.contains(correlationContains.trim(), ignoreCase = true) }
+            if (!value) return false
         }
 
         val haystack = RawText.searchable(entry)

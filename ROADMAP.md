@@ -175,12 +175,12 @@ Goal:
 
 ### Structured metadata
 
-- [ ] traceId
-- [ ] spanId
-- [ ] requestId
-- [ ] service
-- [ ] host
-- [ ] container
+- [x] traceId
+- [x] spanId
+- [x] requestId
+- [x] service
+- [x] host
+- [x] container
 
 ### Correlation
 
@@ -196,17 +196,17 @@ PaymentService
 Database
 ```
 
-- [ ] Group by trace
-- [ ] Search by correlation ID
-- [ ] Visualize related events
-- [ ] Time delta between events
+- [x] Group by trace
+- [x] Search by correlation ID
+- [x] Visualize related events
+- [x] Time delta between events
 
 ### Statistics
 
-- [ ] Log levels over time
-- [ ] Error frequency
-- [ ] Most frequent exceptions
-- [ ] Most active loggers
+- [x] Log levels over time
+- [x] Error frequency
+- [x] Most frequent exceptions
+- [x] Most active loggers
 
 ---
 

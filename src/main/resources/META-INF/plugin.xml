@@ -24,7 +24,7 @@
         <h3>0.1.0 — Initial MVP</h3>
         <ul>
             <li>Dedicated tool window with TRACE/DEBUG/INFO/WARN/ERROR/FATAL filter toggles.</li>
-            <li>Plain-text, Spring Boot, Logback, Log4j and newline-delimited JSON log formats.</li>
+            <li>Plain-text, Spring Boot, Logback, Log4j, compact timestamp-level and newline-delimited JSON formats.</li>
             <li>ANSI SGR colors, backgrounds and text styles in the LogLens viewer.</li>
             <li>Compact log feed with selected-record message and raw-record details.</li>
             <li>Grouped Java/Kotlin exceptions with source navigation and copy actions.</li>

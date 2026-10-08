@@ -29,6 +29,29 @@ class ParserRegistryTest {
     }
 
     @Test
+    fun `registry keeps Spring Boot ahead of generic Logback`() {
+        val registry = ParserRegistry.defaults()
+        val spring = "2026-10-01 10:30:25  INFO 1 --- [main] c.e.App : ok"
+
+        assertEquals("SpringBootLogParser", registry.selectParser(spring)::class.simpleName)
+    }
+
+    @Test
+    fun `registry routes Logback and Log4j lines`() {
+        val registry = ParserRegistry.defaults()
+
+        assertEquals(
+            "LogbackLogParser",
+            registry.selectParser("2026-10-01 10:30:25,123 [main] INFO  c.e.App - ready")::class.simpleName,
+        )
+        registry.reset()
+        assertEquals(
+            "Log4jLogParser",
+            registry.selectParser("10:30:25.123 [main] INFO  c.e.App - ready")::class.simpleName,
+        )
+    }
+
+    @Test
     fun `registry routes plain text lines through the fallback`() {
         val registry = ParserRegistry.defaults()
         val entry = registry.parse("INFO hello", 1)

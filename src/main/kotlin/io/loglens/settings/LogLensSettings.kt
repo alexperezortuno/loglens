@@ -37,6 +37,20 @@ class LogLensSettings : PersistentStateComponent<LogLensSettings.State> {
         var enabledFatal: Boolean = true,
         var lastQuery: String = "",
         var enabledUnknown: Boolean = true,
+        var savedFilters: MutableList<SavedFilter> = mutableListOf(),
+    )
+
+    data class SavedFilter(
+        var name: String = "",
+        var loggerContains: String = "",
+        var threadContains: String = "",
+        var excludeTerms: String = "",
+        var fromTimestamp: String = "",
+        var toTimestamp: String = "",
+        var query: String = "",
+        var regex: Boolean = false,
+        var caseSensitive: Boolean = false,
+        var enabledLevels: String = "INFO,WARN,ERROR,FATAL,UNKNOWN",
     )
 
     companion object {

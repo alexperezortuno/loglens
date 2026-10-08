@@ -203,10 +203,10 @@ Database
 
 ### Statistics
 
-- [ ] Log levels over time
-- [ ] Error frequency
-- [ ] Most frequent exceptions
-- [ ] Most active loggers
+- [x] Log levels over time
+- [x] Error frequency
+- [x] Most frequent exceptions
+- [x] Most active loggers
 
 ---
 

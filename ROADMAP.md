@@ -140,7 +140,7 @@ Goal:
 - [x] Incremental background parsing and paging
 - [x] Lazy list rendering
 - [x] Bounded in-memory cache
-- [ ] Background indexing
+- [x] Background indexing
 
 Target:
 

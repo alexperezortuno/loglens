@@ -35,6 +35,7 @@ class LogViewerToolbar(
     private val clearButton: JButton = JButton("Clear")
     private val loggerField: JTextField = JTextField(8)
     private val threadField: JTextField = JTextField(8)
+    private val correlationField: JTextField = JTextField(10)
     private val excludeField: JTextField = JTextField(8)
     private val fromField: JTextField = JTextField(16)
     private val toField: JTextField = JTextField(16)
@@ -145,8 +146,10 @@ class LogViewerToolbar(
     private fun buildAdvancedRow(): JPanel = JPanel(FlowLayout(FlowLayout.LEFT, 4, 0)).apply {
         add(javax.swing.JLabel("Logger"))
         add(loggerField)
-        add(javax.swing.JLabel("Thread"))
-        add(threadField)
+            add(javax.swing.JLabel("Thread"))
+            add(threadField)
+            add(javax.swing.JLabel("Trace/Request"))
+            add(correlationField)
         add(javax.swing.JLabel("Exclude"))
         add(excludeField)
         add(javax.swing.JLabel("From"))
@@ -214,6 +217,7 @@ class LogViewerToolbar(
     private fun currentAdvancedFilter(): AdvancedFilter = AdvancedFilter(
         loggerContains = loggerField.text,
         threadContains = threadField.text,
+        correlationContains = correlationField.text,
         excludeTerms = excludeField.text,
         fromTimestamp = fromField.text,
         toTimestamp = toField.text,
@@ -236,6 +240,7 @@ class LogViewerToolbar(
             name = name,
             loggerContains = loggerField.text,
             threadContains = threadField.text,
+            correlationContains = correlationField.text,
             excludeTerms = excludeField.text,
             fromTimestamp = fromField.text,
             toTimestamp = toField.text,
@@ -254,6 +259,7 @@ class LogViewerToolbar(
         val preset = LogLensSettings.getInstance().state.savedFilters.firstOrNull { it.name == name } ?: return
         loggerField.text = preset.loggerContains
         threadField.text = preset.threadContains
+        correlationField.text = preset.correlationContains
         excludeField.text = preset.excludeTerms
         fromField.text = preset.fromTimestamp
         toField.text = preset.toTimestamp

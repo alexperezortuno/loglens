@@ -80,6 +80,7 @@ SpringBootLogParser
 LogbackLogParser
 Log4jLogParser
 JsonLinesLogParser
+TimestampLevelLogParser
 ```
 
 Planned:

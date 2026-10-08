@@ -81,6 +81,7 @@ class ParserRegistry(
                 SpringBootLogParser(),
                 LogbackLogParser(),
                 Log4jLogParser(),
+                TimestampLevelLogParser(),
                 PlainTextLogParser(),
             ),
         )

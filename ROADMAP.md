@@ -175,12 +175,12 @@ Goal:
 
 ### Structured metadata
 
-- [ ] traceId
-- [ ] spanId
-- [ ] requestId
-- [ ] service
-- [ ] host
-- [ ] container
+- [x] traceId
+- [x] spanId
+- [x] requestId
+- [x] service
+- [x] host
+- [x] container
 
 ### Correlation
 
@@ -197,7 +197,7 @@ Database
 ```
 
 - [ ] Group by trace
-- [ ] Search by correlation ID
+- [x] Search by correlation ID
 - [ ] Visualize related events
 - [ ] Time delta between events
 

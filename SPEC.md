@@ -72,19 +72,19 @@ interface LogParser {
 
 Parser implementations must remain independent from the UI.
 
-Initial parsers:
+Implemented parsers:
 
 ```text
 PlainTextLogParser
 SpringBootLogParser
+LogbackLogParser
+Log4jLogParser
+JsonLinesLogParser
 ```
 
 Planned:
 
 ```text
-LogbackLogParser
-Log4jLogParser
-JsonLogParser
 DockerLogParser
 NginxLogParser
 ```
@@ -99,10 +99,11 @@ line
  ▼
 ParserRegistry
  │
- ├─ SpringBootLogParser
- ├─ LogbackLogParser
- ├─ JsonLogParser
- └─ PlainTextLogParser
+  ├─ JsonLinesLogParser
+  ├─ SpringBootLogParser
+  ├─ LogbackLogParser
+  ├─ Log4jLogParser
+  └─ PlainTextLogParser
 ```
 
 `PlainTextLogParser` should act as the fallback.
@@ -270,7 +271,12 @@ chunks. Search and filtering apply to the records currently loaded.
 
 # 10. Tail mode
 
-Future versions should support following files being actively written.
+LogLens can follow files being actively written. It polls from the current
+byte offset, ignores incomplete final records until a newline arrives, and
+restarts from the beginning when the file is truncated or rotated. Follow
+mode supports pause/resume, automatic scrolling when the user is already at
+the bottom, a new-entry indicator otherwise, and evicts the oldest records at
+the bounded retention limit.
 
 Equivalent concept:
 

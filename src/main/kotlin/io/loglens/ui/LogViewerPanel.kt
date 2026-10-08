@@ -13,6 +13,7 @@ import io.loglens.model.LogEntry
 import io.loglens.model.LogLevel
 import io.loglens.model.StackFrame
 import io.loglens.model.ThrowableInfo
+import io.loglens.observability.TraceGrouping
 import io.loglens.search.LogSearch
 import io.loglens.service.LogLensProjectService.LogLensSnapshot
 import io.loglens.util.AnsiCodes
@@ -197,6 +198,7 @@ class LogViewerPanel {
     private var filter: LevelFilter = LevelFilter()
     private var advancedFilter: AdvancedFilter = AdvancedFilter.EMPTY
     private var search: LogSearch = LogSearch.EMPTY
+    private var groupByTrace = false
 
     fun update(snapshot: LogLensSnapshot) {
         val wasAtBottom = isAtBottom()
@@ -245,15 +247,21 @@ class LogViewerPanel {
         refresh()
     }
 
+    fun updateGroupByTrace(enabled: Boolean) {
+        groupByTrace = enabled
+        refresh()
+    }
+
     private fun refresh() {
         val selectedIdentity = listComponent.selectedValue?.identity()
         listModel.clear()
-        val visibleEntries = source
+        val matchingEntries = source
             .asSequence()
             .filter { filter.isAllowed(it) }
             .filter { advancedFilter.matches(it) }
             .filter { search.matches(it) }
             .toList()
+        val visibleEntries = if (groupByTrace) TraceGrouping.group(matchingEntries) else matchingEntries
         listModel.addAll(visibleEntries)
 
         val selectedIndex = visibleEntries.indexOfFirst { it.identity() == selectedIdentity }
@@ -279,6 +287,18 @@ class LogViewerPanel {
             frameModel.clear()
             copyExceptionButton.isEnabled = false
             copyFrameButton.isEnabled = false
+            return
+        }
+        if (TraceGrouping.isHeader(entry)) {
+            selectedEntry = null
+            detailTitle.text = entry.message
+            detailContext.text = "Related events are grouped by trace ID"
+            messageArea.text = "Select an event in this trace to inspect its details."
+            rawArea.text = ""
+            frameModel.clear()
+            copyExceptionButton.isEnabled = false
+            copyFrameButton.isEnabled = false
+            detailTabs.selectedIndex = MESSAGE_TAB_INDEX
             return
         }
         detailTitle.text = listOfNotNull(entry.timestamp, entry.level.display()).joinToString("    ·    ")
@@ -510,6 +530,15 @@ class LogViewerPanel {
             message.foreground = textForeground
             metadata.text = metadataSummary(value)
             metadata.foreground = if (isSelected) textForeground else JBColor.GRAY
+            if (TraceGrouping.isHeader(value)) {
+                badge.text = "TRACE"
+                badge.background = JBColor(0x5E4B8B, 0x8E78C2)
+                message.text = value.message
+                message.font = message.font.deriveFont(Font.BOLD)
+                metadata.text = "Related events"
+            } else {
+                message.font = message.font.deriveFont(Font.PLAIN)
+            }
             toolTipText = value.message
             return this
         }

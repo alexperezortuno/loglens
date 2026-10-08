@@ -13,6 +13,9 @@ import io.loglens.model.LogEntry
 import io.loglens.model.LogLevel
 import io.loglens.model.StackFrame
 import io.loglens.model.ThrowableInfo
+import io.loglens.observability.TraceGrouping
+import io.loglens.observability.TraceTimeline
+import io.loglens.observability.LogStatistics
 import io.loglens.search.LogSearch
 import io.loglens.service.LogLensProjectService.LogLensSnapshot
 import io.loglens.util.AnsiCodes
@@ -70,12 +73,26 @@ class LogViewerPanel {
     private val rawArea = detailTextArea().apply {
         font = Font(Font.MONOSPACED, Font.PLAIN, font.size)
     }
+    private val statisticsArea = detailTextArea().apply {
+        font = Font(Font.MONOSPACED, Font.PLAIN, font.size)
+    }
     private val detailTitle = JBLabel("Select a record")
     private val detailContext = JBLabel(" ").apply { foreground = JBColor.GRAY }
     private var selectedEntry: LogEntry? = null
     private var stackFrameNavigationHandler: ((StackFrame, JComponent) -> Unit)? = null
     private val exceptionSummary = JBLabel("No exception details")
     private val frameModel = DefaultListModel<FrameRow>()
+    private val traceModel = DefaultListModel<TraceRow>()
+    private val traceList: JList<TraceRow> = JBList(traceModel).apply {
+        cellRenderer = TraceRowRenderer()
+        addListSelectionListener { event ->
+            if (event.valueIsAdjusting) return@addListSelectionListener
+            selectedValue?.entry?.let { entry ->
+                listComponent.setSelectedValue(entry, true)
+                showDetails(entry)
+            }
+        }
+    }
     private val frameList: JList<FrameRow> = JBList(frameModel).apply {
         cellRenderer = FrameRowRenderer()
         visibleRowCount = 12
@@ -132,6 +149,8 @@ class LogViewerPanel {
         addTab("Message", JBScrollPane(messageArea))
         addTab("Raw record", JBScrollPane(rawArea))
         addTab("Exception", exceptionPanel)
+        addTab("Trace timeline", JBScrollPane(traceList))
+        addTab("Statistics", JBScrollPane(statisticsArea))
     }
     private val details = JPanel(BorderLayout(0, 8)).apply {
         border = BorderFactory.createEmptyBorder(12, 14, 12, 12)
@@ -150,6 +169,10 @@ class LogViewerPanel {
         border = BorderFactory.createEmptyBorder()
     }
     private val loadStatus = JLabel("Open a log file")
+    private val statisticsSummary = JLabel(" ").apply {
+        foreground = JBColor.GRAY
+        toolTipText = "Statistics for records currently loaded in the viewer"
+    }
     private var loadMoreAction: (() -> Unit)? = null
     private var cancelLoadAction: (() -> Unit)? = null
     private var tailAction: (() -> Unit)? = null
@@ -177,6 +200,7 @@ class LogViewerPanel {
         add(loadStatus, BorderLayout.CENTER)
         add(JPanel(FlowLayout(FlowLayout.RIGHT, 6, 0)).apply {
             isOpaque = false
+            add(statisticsSummary)
             add(newEntriesButton)
             add(followButton)
             add(loadMoreButton)
@@ -197,6 +221,7 @@ class LogViewerPanel {
     private var filter: LevelFilter = LevelFilter()
     private var advancedFilter: AdvancedFilter = AdvancedFilter.EMPTY
     private var search: LogSearch = LogSearch.EMPTY
+    private var groupByTrace = false
 
     fun update(snapshot: LogLensSnapshot) {
         val wasAtBottom = isAtBottom()
@@ -205,6 +230,7 @@ class LogViewerPanel {
         }
         lastSnapshot = snapshot
         source = snapshot.entries
+        updateStatistics()
         updateLoadStatus(snapshot)
         refresh()
         if (snapshot.isTailing && wasAtBottom) scrollToBottom()
@@ -245,15 +271,21 @@ class LogViewerPanel {
         refresh()
     }
 
+    fun updateGroupByTrace(enabled: Boolean) {
+        groupByTrace = enabled
+        refresh()
+    }
+
     private fun refresh() {
         val selectedIdentity = listComponent.selectedValue?.identity()
         listModel.clear()
-        val visibleEntries = source
+        val matchingEntries = source
             .asSequence()
             .filter { filter.isAllowed(it) }
             .filter { advancedFilter.matches(it) }
             .filter { search.matches(it) }
             .toList()
+        val visibleEntries = if (groupByTrace) TraceGrouping.group(matchingEntries) else matchingEntries
         listModel.addAll(visibleEntries)
 
         val selectedIndex = visibleEntries.indexOfFirst { it.identity() == selectedIdentity }
@@ -277,8 +309,22 @@ class LogViewerPanel {
             rawArea.text = ""
             exceptionSummary.text = "No exception details"
             frameModel.clear()
+            traceModel.clear()
             copyExceptionButton.isEnabled = false
             copyFrameButton.isEnabled = false
+            return
+        }
+        if (TraceGrouping.isHeader(entry)) {
+            selectedEntry = null
+            detailTitle.text = entry.message
+            detailContext.text = "Related events are grouped by trace ID"
+            messageArea.text = "Select an event in this trace to inspect its details."
+            rawArea.text = ""
+            frameModel.clear()
+            traceModel.clear()
+            copyExceptionButton.isEnabled = false
+            copyFrameButton.isEnabled = false
+            detailTabs.selectedIndex = MESSAGE_TAB_INDEX
             return
         }
         detailTitle.text = listOfNotNull(entry.timestamp, entry.level.display()).joinToString("    ·    ")
@@ -294,7 +340,69 @@ class LogViewerPanel {
         rawArea.text = prettyRaw(entry.raw)
         rawArea.caretPosition = 0
         updateExceptionDetails(entry.throwable)
+        updateTraceTimeline(entry)
         detailTabs.selectedIndex = if (entry.throwable != null) EXCEPTION_TAB_INDEX else MESSAGE_TAB_INDEX
+    }
+
+    private fun updateTraceTimeline(entry: LogEntry) {
+        traceModel.clear()
+        TraceTimeline.forEntry(entry, source).forEach { event ->
+            val context = listOfNotNull(
+                event.entry.metadata["service"],
+                event.entry.logger,
+            ).firstOrNull().orEmpty()
+            val delta = event.deltaMillis?.let { "+${formatDuration(it)}" } ?: "  start"
+            traceModel.addElement(TraceRow("$delta  ${event.entry.level.display()}  ${context.ifBlank { "event" }}  ${event.entry.message}", event.entry))
+        }
+    }
+
+    private fun updateStatistics() {
+        val stats = LogStatistics.calculate(source)
+        val traces = source.mapNotNull { it.metadata["traceId"]?.takeIf(String::isNotBlank) }.toSet().size
+        statisticsSummary.text = if (stats.totalEntries == 0) {
+            " "
+        } else {
+            "errors ${stats.errorCount} · exceptions ${stats.exceptionCounts.size} · traces $traces"
+        }
+        statisticsArea.text = buildString {
+            appendLine("Records: ${stats.totalEntries}")
+            appendLine("Errors + fatal: ${stats.errorCount}")
+            appendLine()
+            appendLine("Log levels")
+            stats.levelCounts.entries.sortedByDescending { it.value }.forEach { (level, count) ->
+                appendLine("  ${level.display().padEnd(8)} $count")
+            }
+            appendLine()
+            appendLine("Most frequent exceptions")
+            appendRanked(stats.exceptionCounts)
+            appendLine()
+            appendLine("Most active loggers")
+            appendRanked(stats.loggerCounts)
+            appendLine()
+            appendLine("Levels over time (UTC minute)")
+            stats.levelsOverTime.forEach { (minute, counts) ->
+                val summary = counts.entries.sortedByDescending { it.value }
+                    .joinToString(", ") { "${it.key.display()}=${it.value}" }
+                appendLine("  $minute  $summary")
+            }
+        }
+        statisticsArea.caretPosition = 0
+    }
+
+    private fun StringBuilder.appendRanked(values: Map<String, Int>) {
+        if (values.isEmpty()) {
+            appendLine("  (none)")
+        } else {
+            values.entries.sortedWith(compareByDescending<Map.Entry<String, Int>> { it.value }.thenBy { it.key })
+                .take(STATISTICS_LIMIT)
+                .forEach { (name, count) -> appendLine("  $count  $name") }
+        }
+    }
+
+    private fun formatDuration(millis: Long): String = when {
+        millis < 1_000 -> "${millis}ms"
+        millis < 60_000 -> "%.3fs".format(millis / 1_000.0)
+        else -> "%.1fm".format(millis / 60_000.0)
     }
 
     private fun updateExceptionDetails(throwable: ThrowableInfo?) {
@@ -347,6 +455,24 @@ class LogViewerPanel {
         val frame: StackFrame?,
         val depth: Int = 0,
     )
+
+    private data class TraceRow(val text: String, val entry: LogEntry)
+
+    private inner class TraceRowRenderer : DefaultListCellRenderer() {
+        override fun getListCellRendererComponent(
+            list: JList<*>?,
+            value: Any?,
+            index: Int,
+            isSelected: Boolean,
+            cellHasFocus: Boolean,
+        ): Component {
+            val label = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus)
+            val row = value as? TraceRow ?: return label
+            text = row.text
+            border = BorderFactory.createEmptyBorder(5, 8, 5, 8)
+            return label
+        }
+    }
 
     private inner class FrameRowRenderer : DefaultListCellRenderer() {
         override fun getListCellRendererComponent(
@@ -510,6 +636,15 @@ class LogViewerPanel {
             message.foreground = textForeground
             metadata.text = metadataSummary(value)
             metadata.foreground = if (isSelected) textForeground else JBColor.GRAY
+            if (TraceGrouping.isHeader(value)) {
+                badge.text = "TRACE"
+                badge.background = JBColor(0x5E4B8B, 0x8E78C2)
+                message.text = value.message
+                message.font = message.font.deriveFont(Font.BOLD)
+                metadata.text = "Related events"
+            } else {
+                message.font = message.font.deriveFont(Font.PLAIN)
+            }
             toolTipText = value.message
             return this
         }
@@ -575,6 +710,7 @@ class LogViewerPanel {
         const val CARD_HEIGHT = 54
         const val MESSAGE_TAB_INDEX = 0
         const val EXCEPTION_TAB_INDEX = 2
+        const val STATISTICS_LIMIT = 10
         val TIME_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("MMM d · HH:mm:ss", Locale.getDefault())
         val DISPLAYED_METADATA_KEYS = setOf(
             "app", "module", "function", "sourceLine", "stackTracePending", "exceptionTruncated",

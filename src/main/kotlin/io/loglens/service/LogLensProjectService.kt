@@ -9,6 +9,9 @@ import com.intellij.openapi.vfs.VirtualFile
 import io.loglens.exception.StackTraceAssembler
 import io.loglens.model.LogEntry
 import io.loglens.parser.ParserRegistry
+import io.loglens.source.LogSource
+import io.loglens.source.DockerCommands
+import io.loglens.source.ProcessLogCapture
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.CancellationException
@@ -30,6 +33,7 @@ class LogLensProjectService(private val project: Project) : Disposable {
     }
 
     private var activeLoad: ActiveLoad? = null
+    private var processCapture: ProcessLogCapture? = null
 
     @Volatile
     private var currentSnapshot: LogLensSnapshot = LogLensSnapshot.empty()
@@ -43,6 +47,8 @@ class LogLensProjectService(private val project: Project) : Disposable {
 
     /** Begin loading [path] asynchronously from its first record. */
     fun openPath(path: Path) {
+        processCapture?.stop()
+        processCapture = null
         val session: ActiveLoad
         val initial: LogLensSnapshot
         synchronized(lock) {
@@ -56,6 +62,30 @@ class LogLensProjectService(private val project: Project) : Disposable {
         dispatch(initial)
         schedulePage(session, firstPage = true)
         scheduleIndex(session)
+    }
+
+    /** Run a local command and follow its combined stdout/stderr as a log source. */
+    fun openProcess(command: List<String>) {
+        processCapture?.stop()
+        val capture = ProcessLogCapture.start(command)
+        try {
+            openPath(capture.path)
+            processCapture = capture
+            toggleTailing()
+        } catch (error: Exception) {
+            capture.stop()
+            throw error
+        }
+    }
+
+    /** Open any supported local source through the shared viewer pipeline. */
+    fun openSource(source: LogSource) {
+        when (source) {
+            is LogSource.File -> openPath(source.path)
+            is LogSource.Process -> openProcess(source.command)
+            is LogSource.DockerContainer -> openProcess(DockerCommands.container(source.container))
+            is LogSource.DockerCompose -> openProcess(DockerCommands.compose(source.composeFile, source.service))
+        }
     }
 
     /** Load the next bounded page for the currently open log. */
@@ -395,6 +425,8 @@ class LogLensProjectService(private val project: Project) : Disposable {
             activeLoad?.task?.cancel(true)
             activeLoad?.indexTask?.cancel(true)
             activeLoad = null
+            processCapture?.stop()
+            processCapture = null
         }
         executor.shutdownNow()
         listeners.clear()

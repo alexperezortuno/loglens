@@ -2,6 +2,7 @@ package io.loglens.parser
 
 import io.loglens.model.LogEntry
 import io.loglens.util.AnsiCodes
+import io.loglens.util.ObservabilityMetadata
 
 /**
  * Selects the appropriate [LogParser] for an input line.
@@ -65,7 +66,7 @@ class ParserRegistry(
     fun parse(line: String, lineNumber: Int? = null): LogEntry {
         val normalizedLine = AnsiCodes.strip(line)
         val parser = selectParserFor(normalizedLine)
-        return parser.parse(normalizedLine, lineNumber).copy(raw = line)
+        return ObservabilityMetadata.enrich(parser.parse(normalizedLine, lineNumber).copy(raw = line))
     }
 
     /** Drop the cached affinity. Call when switching files. */

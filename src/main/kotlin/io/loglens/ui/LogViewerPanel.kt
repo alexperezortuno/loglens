@@ -409,12 +409,18 @@ class LogViewerPanel {
     private fun updateLoadStatus(snapshot: LogLensSnapshot) {
         val total = snapshot.totalBytes?.let { " of ${formatBytes(it)}" }.orEmpty()
         val progress = "first ${snapshot.entries.size} records · ${formatBytes(snapshot.bytesRead)}$total"
+        val indexProgress = if (snapshot.indexedEntries > 0) {
+            "indexed ${snapshot.indexedEntries} records · ${formatBytes(snapshot.indexedBytes)}"
+        } else {
+            null
+        }
         loadStatus.text = buildList {
             add(when {
                 snapshot.isLoading && snapshot.entries.isEmpty() -> "Loading log…"
                 snapshot.isLoading -> "Loading more…  $progress"
                 else -> "Showing the $progress"
             })
+            indexProgress?.let(::add)
             snapshot.statusMessage?.let(::add)
         }.joinToString("    ·    ")
         loadMoreButton.text = if (snapshot.isLoading) "Cancel" else "Load more"

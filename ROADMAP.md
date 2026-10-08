@@ -198,8 +198,8 @@ Database
 
 - [x] Group by trace
 - [x] Search by correlation ID
-- [ ] Visualize related events
-- [ ] Time delta between events
+- [x] Visualize related events
+- [x] Time delta between events
 
 ### Statistics
 

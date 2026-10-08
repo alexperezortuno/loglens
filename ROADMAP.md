@@ -132,8 +132,8 @@ Goal:
 ### Formats
 
 - [x] Newline-delimited JSON logs
-- [ ] Logback
-- [ ] Log4j
+- [x] Logback
+- [x] Log4j
 
 ### Large files
 
@@ -151,11 +151,11 @@ Target:
 
 ### Tail mode
 
-- [ ] Follow active files
-- [ ] Detect appended content
-- [ ] Pause/resume
-- [ ] Auto-scroll
-- [ ] New-entry indicator
+- [x] Follow active files
+- [x] Detect appended content
+- [x] Pause/resume
+- [x] Auto-scroll
+- [x] New-entry indicator
 
 ### Filters
 

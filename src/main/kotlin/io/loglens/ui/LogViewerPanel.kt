@@ -14,6 +14,7 @@ import io.loglens.model.LogLevel
 import io.loglens.model.StackFrame
 import io.loglens.model.ThrowableInfo
 import io.loglens.observability.TraceGrouping
+import io.loglens.observability.TraceTimeline
 import io.loglens.search.LogSearch
 import io.loglens.service.LogLensProjectService.LogLensSnapshot
 import io.loglens.util.AnsiCodes
@@ -77,6 +78,17 @@ class LogViewerPanel {
     private var stackFrameNavigationHandler: ((StackFrame, JComponent) -> Unit)? = null
     private val exceptionSummary = JBLabel("No exception details")
     private val frameModel = DefaultListModel<FrameRow>()
+    private val traceModel = DefaultListModel<TraceRow>()
+    private val traceList: JList<TraceRow> = JBList(traceModel).apply {
+        cellRenderer = TraceRowRenderer()
+        addListSelectionListener { event ->
+            if (event.valueIsAdjusting) return@addListSelectionListener
+            selectedValue?.entry?.let { entry ->
+                listComponent.setSelectedValue(entry, true)
+                showDetails(entry)
+            }
+        }
+    }
     private val frameList: JList<FrameRow> = JBList(frameModel).apply {
         cellRenderer = FrameRowRenderer()
         visibleRowCount = 12
@@ -133,6 +145,7 @@ class LogViewerPanel {
         addTab("Message", JBScrollPane(messageArea))
         addTab("Raw record", JBScrollPane(rawArea))
         addTab("Exception", exceptionPanel)
+        addTab("Trace timeline", JBScrollPane(traceList))
     }
     private val details = JPanel(BorderLayout(0, 8)).apply {
         border = BorderFactory.createEmptyBorder(12, 14, 12, 12)
@@ -285,6 +298,7 @@ class LogViewerPanel {
             rawArea.text = ""
             exceptionSummary.text = "No exception details"
             frameModel.clear()
+            traceModel.clear()
             copyExceptionButton.isEnabled = false
             copyFrameButton.isEnabled = false
             return
@@ -296,6 +310,7 @@ class LogViewerPanel {
             messageArea.text = "Select an event in this trace to inspect its details."
             rawArea.text = ""
             frameModel.clear()
+            traceModel.clear()
             copyExceptionButton.isEnabled = false
             copyFrameButton.isEnabled = false
             detailTabs.selectedIndex = MESSAGE_TAB_INDEX
@@ -314,7 +329,26 @@ class LogViewerPanel {
         rawArea.text = prettyRaw(entry.raw)
         rawArea.caretPosition = 0
         updateExceptionDetails(entry.throwable)
+        updateTraceTimeline(entry)
         detailTabs.selectedIndex = if (entry.throwable != null) EXCEPTION_TAB_INDEX else MESSAGE_TAB_INDEX
+    }
+
+    private fun updateTraceTimeline(entry: LogEntry) {
+        traceModel.clear()
+        TraceTimeline.forEntry(entry, source).forEach { event ->
+            val context = listOfNotNull(
+                event.entry.metadata["service"],
+                event.entry.logger,
+            ).firstOrNull().orEmpty()
+            val delta = event.deltaMillis?.let { "+${formatDuration(it)}" } ?: "  start"
+            traceModel.addElement(TraceRow("$delta  ${event.entry.level.display()}  ${context.ifBlank { "event" }}  ${event.entry.message}", event.entry))
+        }
+    }
+
+    private fun formatDuration(millis: Long): String = when {
+        millis < 1_000 -> "${millis}ms"
+        millis < 60_000 -> "%.3fs".format(millis / 1_000.0)
+        else -> "%.1fm".format(millis / 60_000.0)
     }
 
     private fun updateExceptionDetails(throwable: ThrowableInfo?) {
@@ -367,6 +401,24 @@ class LogViewerPanel {
         val frame: StackFrame?,
         val depth: Int = 0,
     )
+
+    private data class TraceRow(val text: String, val entry: LogEntry)
+
+    private inner class TraceRowRenderer : DefaultListCellRenderer() {
+        override fun getListCellRendererComponent(
+            list: JList<*>?,
+            value: Any?,
+            index: Int,
+            isSelected: Boolean,
+            cellHasFocus: Boolean,
+        ): Component {
+            val label = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus)
+            val row = value as? TraceRow ?: return label
+            text = row.text
+            border = BorderFactory.createEmptyBorder(5, 8, 5, 8)
+            return label
+        }
+    }
 
     private inner class FrameRowRenderer : DefaultListCellRenderer() {
         override fun getListCellRendererComponent(

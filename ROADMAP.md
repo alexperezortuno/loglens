@@ -159,11 +159,11 @@ Target:
 
 ### Filters
 
-- [ ] Logger filter
-- [ ] Thread filter
-- [ ] Date/time range
-- [ ] Exclusion filters
-- [ ] Saved filters
+- [x] Logger filter
+- [x] Thread filter
+- [x] Date/time range
+- [x] Exclusion filters
+- [x] Saved filters
 
 ---
 

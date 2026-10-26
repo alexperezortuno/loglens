@@ -5,6 +5,7 @@ import io.loglens.model.LogEntry
 import io.loglens.model.LogLevel
 
 /** Parser for compact timestamp and bracket-level logs such as `12:34:56.789 [ERROR] message`. */
+@StableApi
 class TimestampLevelLogParser : LogParser {
 
     override fun supports(line: String): Boolean =

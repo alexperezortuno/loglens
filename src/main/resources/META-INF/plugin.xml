@@ -2,7 +2,7 @@
 <idea-plugin url="https://github.com/loglens/loglens" requireRestart="false">
     <id>io.loglens.plugin</id>
     <name>LogLens</name>
-    <version>0.1.0</version>
+    <version>1.0.0</version>
     <vendor>LogLens</vendor>
     <description><![CDATA[
         A fast, offline-first log viewer for IntelliJ IDEA.
@@ -21,19 +21,19 @@
     <depends>com.intellij.java</depends>
 
     <change-notes><![CDATA[
-        <h3>0.1.0 — Initial MVP</h3>
+        <h3>1.0.0 — Stable Release</h3>
         <ul>
-            <li>Dedicated tool window with TRACE/DEBUG/INFO/WARN/ERROR/FATAL filter toggles.</li>
-            <li>Plain-text, Spring Boot, Logback, Log4j, compact timestamp-level and newline-delimited JSON formats.</li>
-            <li>ANSI SGR colors, backgrounds and text styles in the LogLens viewer.</li>
-            <li>Compact log feed with selected-record message and raw-record details.</li>
-            <li>Grouped Java/Kotlin exceptions with source navigation and copy actions.</li>
-            <li>Tail mode with pause/resume, automatic scrolling and new-entry indicators.</li>
-            <li>LogLens file editor for ordinary .log and .out file opens.</li>
-            <li>Plain-text and case-sensitive search; optional regular expressions.</li>
-            <li>Buffered file reader for .log, .out and .txt files.</li>
-            <li>Graceful handling of malformed lines.</li>
-            <li>Unit tests for parsers, filters and search.</li>
+            <li>Stable Parser API (versioned with @StableApi/@ExperimentalApi/@DeprecatedApi annotations)</li>
+            <li>Reliable large-file support (bounded paging, retention limits, rotation detection)</li>
+            <li>Stack-trace navigation with clickable frames</li>
+            <li>Search and advanced filtering (logger, thread, date range, exclusions)</li>
+            <li>Tail mode with pause/resume, auto-scroll, new-entry indicator</li>
+            <li>Spring Boot, Logback, Log4j, JSON Lines, compact timestamp-level parsers</li>
+            <li>Trace grouping, timeline view, log statistics</li>
+            <li>Docker, Docker Compose, and local process log sources</li>
+            <li>Optional local AI (Ollama, OpenAI-compatible) for error analysis</li>
+            <li>147 tests passing</li>
+            <li>Verified compatibility with IntelliJ 2024.3–2025.2 (Plugin Verifier)</li>
         </ul>
     ]]></change-notes>
 

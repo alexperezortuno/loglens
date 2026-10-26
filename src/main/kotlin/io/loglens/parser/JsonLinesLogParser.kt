@@ -9,6 +9,7 @@ import io.loglens.exception.StackTraceDetector
 import io.loglens.util.AnsiCodes
 
 /** Parser for newline-delimited JSON log records. */
+@StableApi
 class JsonLinesLogParser : LogParser {
 
     override fun supports(line: String): Boolean = prepared(line).startsWith('{')

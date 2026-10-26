@@ -1,5 +1,8 @@
 package io.loglens.ui
 
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.progress.ProgressIndicator
+import com.intellij.openapi.progress.Task
 import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBList
@@ -7,6 +10,10 @@ import com.intellij.ui.components.JBPanel
 import com.intellij.ui.components.JBScrollPane
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonParser
+import io.loglens.ai.AiAction
+import io.loglens.ai.AiRequest
+import io.loglens.ai.AiResponse
+import io.loglens.ai.AiService
 import io.loglens.filter.LevelFilter
 import io.loglens.filter.AdvancedFilter
 import io.loglens.model.LogEntry
@@ -18,6 +25,7 @@ import io.loglens.observability.TraceTimeline
 import io.loglens.observability.LogStatistics
 import io.loglens.search.LogSearch
 import io.loglens.service.LogLensProjectService.LogLensSnapshot
+import io.loglens.settings.LogLensSettings
 import io.loglens.util.AnsiCodes
 import java.awt.BorderLayout
 import java.awt.Color
@@ -130,6 +138,13 @@ class LogViewerPanel {
         isEnabled = false
         addActionListener { frameList.selectedValue?.frame?.let { copyText(formatFrame(it)) } }
     }
+    private val aiButtons = AiAction.all.map { action ->
+        JButton(action.label).apply {
+            isEnabled = false
+            addActionListener { onAiAction(action) }
+            toolTipText = "Use local AI to ${action.label.lowercase()}"
+        }
+    }
     private val exceptionPanel = JPanel(BorderLayout(0, 8)).apply {
         border = BorderFactory.createEmptyBorder(10, 10, 10, 10)
         val controls = JPanel(BorderLayout(8, 0)).apply {
@@ -139,6 +154,7 @@ class LogViewerPanel {
                 isOpaque = false
                 add(copyFrameButton)
                 add(copyExceptionButton)
+                aiButtons.forEach { add(it) }
             }
             add(buttons, BorderLayout.EAST)
         }
@@ -302,6 +318,8 @@ class LogViewerPanel {
 
     private fun showDetails(entry: LogEntry?) {
         selectedEntry = entry
+        val aiEnabled = LogLensSettings.getInstance().state.aiEnabled
+        aiButtons.forEach { it.isEnabled = false }
         if (entry == null) {
             detailTitle.text = "Select a record"
             detailContext.text = " "
@@ -342,6 +360,9 @@ class LogViewerPanel {
         updateExceptionDetails(entry.throwable)
         updateTraceTimeline(entry)
         detailTabs.selectedIndex = if (entry.throwable != null) EXCEPTION_TAB_INDEX else MESSAGE_TAB_INDEX
+        if (aiEnabled && entry.throwable != null) {
+            aiButtons.forEach { it.isEnabled = true }
+        }
     }
 
     private fun updateTraceTimeline(entry: LogEntry) {
@@ -419,6 +440,120 @@ class LogViewerPanel {
         addThrowableFrames(throwable, causeLabel = null, depth = 0)
         copyExceptionButton.isEnabled = true
         copyFrameButton.isEnabled = false
+    }
+
+    private fun onAiAction(action: AiAction) {
+        val entry = selectedEntry ?: return
+        val settings = LogLensSettings.getInstance()
+        if (!settings.state.aiEnabled) return
+
+        val provider = settings.getAiProvider()
+        val aiService = AiService.create()
+
+        val context = buildAiContext(entry)
+        val request = AiRequest(
+            action = action,
+            entry = formatEntryForAi(entry),
+            context = context,
+            provider = provider,
+        )
+
+        aiButtons.forEach { it.isEnabled = false }
+        val progressButton = aiButtons.find { it.text == action.label } ?: return
+        progressButton.text = "…"
+
+        object : Task.Backgroundable(null, "LogLens AI: ${action.label}", false) {
+            override fun run(indicator: ProgressIndicator) {
+                val response = aiService.send(request)
+                ApplicationManager.getApplication().invokeLater {
+                    progressButton.text = action.label
+                    aiButtons.forEach { it.isEnabled = true }
+                    when (response) {
+                        is AiResponse.Success -> showAiResult(action.label, response.content)
+                        is AiResponse.Error -> showAiError(action.label, response.message)
+                    }
+                }
+            }
+        }.queue()
+    }
+
+    private fun buildAiContext(entry: LogEntry): String {
+        val traceId = entry.metadata["traceId"]
+        val spanId = entry.metadata["spanId"]
+        val requestId = entry.metadata["requestId"]
+        val service = entry.metadata["service"]
+
+        val related = source
+            .filter { it != entry }
+            .filter { it.metadata["traceId"] == traceId || it.metadata["spanId"] == spanId || it.metadata["requestId"] == requestId }
+            .take(20)
+            .joinToString("\n") { formatEntryForAi(it) }
+
+        val correlation = listOfNotNull(
+            traceId?.let { "traceId=$it" },
+            spanId?.let { "spanId=$it" },
+            requestId?.let { "requestId=$it" },
+            service?.let { "service=$it" },
+            entry.logger?.let { "logger=$it" },
+            entry.thread?.let { "thread=$it" },
+        ).joinToString(", ")
+
+        return if (related.isNotBlank()) {
+            "Correlation: $correlation\n\nRelated entries:\n$related"
+        } else {
+            "Correlation: $correlation\n\n(no related entries found)"
+        }
+    }
+
+    private fun formatEntryForAi(entry: LogEntry): String {
+        val parts = mutableListOf<String>()
+        entry.timestamp?.let { parts += "time=$it" }
+        entry.level?.let { parts += "level=$it" }
+        entry.logger?.let { parts += "logger=$it" }
+        entry.thread?.let { parts += "thread=$it" }
+        parts += "message=${entry.message}"
+        entry.throwable?.let { parts += "exception=${it.className}: ${it.message}" }
+        entry.metadata.entries.forEach { (k, v) -> parts += "$k=$v" }
+        return parts.joinToString(" | ")
+    }
+
+    private fun showAiResult(actionLabel: String, content: String) {
+        val dialog = javax.swing.JDialog()
+        dialog.title = "LogLens AI — $actionLabel"
+        dialog.setSize(600, 400)
+        dialog.setLocationRelativeTo(component)
+        val textArea = javax.swing.JTextArea(content).apply {
+            isEditable = false
+            lineWrap = true
+            wrapStyleWord = true
+            font = Font(Font.MONOSPACED, Font.PLAIN, 13)
+            margin = java.awt.Insets(10, 10, 10, 10)
+        }
+        val scrollPane = JBScrollPane(textArea)
+        val copyButton = JButton("Copy").apply {
+            addActionListener { copyText(content) }
+        }
+        val closeButton = JButton("Close").apply {
+            addActionListener { dialog.dispose() }
+        }
+        val buttonPanel = JPanel(FlowLayout(FlowLayout.RIGHT)).apply {
+            add(copyButton)
+            add(closeButton)
+        }
+        dialog.contentPane.apply {
+            layout = BorderLayout()
+            add(scrollPane, BorderLayout.CENTER)
+            add(buttonPanel, BorderLayout.SOUTH)
+        }
+        dialog.isVisible = true
+    }
+
+    private fun showAiError(actionLabel: String, message: String) {
+        com.intellij.openapi.ui.Messages.showErrorDialog(
+            component,
+            "AI request failed: $message",
+            "LogLens AI — $actionLabel",
+        )
     }
 
     private fun addThrowableFrames(throwable: ThrowableInfo, causeLabel: String?, depth: Int) {

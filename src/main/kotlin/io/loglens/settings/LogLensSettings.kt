@@ -4,6 +4,7 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.PersistentStateComponent
 import com.intellij.openapi.components.State
 import com.intellij.openapi.components.Storage
+import io.loglens.ai.AiProvider
 
 /**
  * Plugin-wide preferences. Kept intentionally small for 0.1 — just the bits
@@ -38,6 +39,14 @@ class LogLensSettings : PersistentStateComponent<LogLensSettings.State> {
         var lastQuery: String = "",
         var enabledUnknown: Boolean = true,
         var savedFilters: MutableList<SavedFilter> = mutableListOf(),
+        // AI settings (0.6)
+        var aiEnabled: Boolean = false,
+        var aiProviderId: String = "ollama",
+        var aiOllamaBaseUrl: String = "http://localhost:11434",
+        var aiOllamaModel: String = "llama3.1",
+        var aiOpenAiBaseUrl: String = "",
+        var aiOpenAiApiKey: String = "",
+        var aiOpenAiModel: String = "",
     )
 
     data class SavedFilter(
@@ -53,6 +62,21 @@ class LogLensSettings : PersistentStateComponent<LogLensSettings.State> {
         var caseSensitive: Boolean = false,
         var enabledLevels: String = "INFO,WARN,ERROR,FATAL,UNKNOWN",
     )
+
+    fun getAiProvider(): AiProvider {
+        return when (stateValue.aiProviderId) {
+            "ollama" -> AiProvider.Ollama(
+                baseUrl = stateValue.aiOllamaBaseUrl,
+                model = stateValue.aiOllamaModel,
+            )
+            "openai-compatible" -> AiProvider.OpenAiCompatible(
+                baseUrl = stateValue.aiOpenAiBaseUrl,
+                apiKey = stateValue.aiOpenAiApiKey,
+                model = stateValue.aiOpenAiModel,
+            )
+            else -> AiProvider.Ollama()
+        }
+    }
 
     companion object {
         @JvmStatic

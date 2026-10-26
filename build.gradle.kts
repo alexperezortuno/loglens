@@ -21,6 +21,8 @@ dependencies {
 
     implementation(kotlin("stdlib-jdk8"))
     implementation("com.google.code.gson:gson:2.11.0")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
 
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5:2.1.20")
     testImplementation("org.junit.jupiter:junit-jupiter:5.11.3")

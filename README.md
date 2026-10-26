@@ -2,9 +2,9 @@
 
 LogLens is an IntelliJ IDEA plugin that brings a dedicated log viewer into the IDE.
 
-Open `.log`, `.out` and `.txt` files in LogLens with level filtering, plain-text and regex search. LogLens can also follow local processes, Docker containers, and Docker Compose services. Spring Boot, Logback, Log4j, compact timestamp-level, ANSI-formatted and newline-delimited JSON logs are supported. No network access, no external services — the whole experience is local-first.
+Open `.log`, `.out` and `.txt` files in LogLens with level filtering, plain-text and regex search. LogLens can also follow local processes, Docker containers, and Docker Compose services. Spring Boot, Logback, Log4j, compact timestamp-level, ANSI-formatted and newline-delimited JSON logs are supported. **Optional local AI analysis** (Ollama, OpenAI-compatible endpoints) explains errors, summarizes exceptions, and suggests debugging steps. No network access, no external services required — the whole experience is local-first.
 
-The technical specification lives in [SPEC.md](SPEC.md) and the iteration plan in [ROADMAP.md](ROADMAP.md). The current source tree implements the **0.1 MVP**, **0.2 developer navigation**, and selected **0.3 advanced viewer** capabilities.
+The technical specification lives in [SPEC.md](SPEC.md) and the iteration plan in [ROADMAP.md](ROADMAP.md). The current source tree implements the **0.1 MVP**, **0.2 developer navigation**, **0.3 advanced viewer**, **0.5 multiple sources**, and **0.6 local AI** capabilities.
 
 ## Features
 
@@ -34,9 +34,10 @@ The technical specification lives in [SPEC.md](SPEC.md) and the iteration plan i
 - **Search** with plain text, case-sensitive option, and **regular expression** mode; composable with the level filter.
 - **Grouped Java/Kotlin exceptions** with parsed causes, suppressed exceptions, clickable source frames, and source navigation.
 - Copy complete exceptions or individual frames from the exception detail pane.
-- **Persistent preferences** (filter state, search options) via `LogLensSettings`.
+- **Optional local AI analysis** (0.6): Explain error, Summarize exception, Find probable cause, Explain stack trace, Find related events, Suggest debugging steps. Supports Ollama and OpenAI-compatible endpoints. Disabled by default.
+- **Persistent preferences** (filter state, search options, AI settings) via `LogLensSettings`.
 - Graceful handling of malformed lines; raw text is always preserved.
-- Unit tests for parsers, stack-trace grouping/navigation, filters, search and bounded file reading.
+- Unit tests for parsers, stack-trace grouping/navigation, filters, search, AI providers, and bounded file reading.
 
 ## Tech Stack
 

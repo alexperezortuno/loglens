@@ -3,6 +3,9 @@ plugins {
     id("org.jetbrains.intellij.platform") version "2.6.0"
 }
 
+import org.jetbrains.intellij.platform.gradle.IntelliJPlatformType
+import org.jetbrains.intellij.platform.gradle.models.ProductRelease
+
 group = providers.gradleProperty("pluginGroup").get()
 version = providers.gradleProperty("pluginVersion").get()
 
@@ -10,6 +13,7 @@ repositories {
     mavenCentral()
     intellijPlatform {
         defaultRepositories()
+        localPlatformArtifacts()
     }
 }
 
@@ -39,6 +43,17 @@ intellijPlatform {
         ideaVersion {
             sinceBuild = providers.gradleProperty("pluginSinceBuild")
             untilBuild = providers.gradleProperty("pluginUntilBuild")
+        }
+    }
+    pluginVerification {
+        ides {
+            // Verify against IntelliJ IDEA Community editions matching since-build 243 through until-build 253.*
+            select {
+                types = listOf(IntelliJPlatformType.IntellijIdeaCommunity)
+                channels = listOf(ProductRelease.Channel.RELEASE)
+                sinceBuild = "243"
+                untilBuild = "252.*"
+            }
         }
     }
 }

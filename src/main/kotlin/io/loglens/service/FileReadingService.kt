@@ -6,8 +6,12 @@ import java.io.BufferedInputStream
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.io.InputStreamReader
+import java.nio.ByteBuffer
 import java.nio.channels.Channels
 import java.nio.channels.FileChannel
+import java.nio.charset.Charset
+import java.nio.charset.CharsetDecoder
+import java.nio.charset.CodingErrorAction
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
@@ -22,6 +26,41 @@ object FileReadingService {
     /** Default chunk size: 64 KiB — large enough for fast scans, small enough
      *  to remain predictable on small files. */
     private const val BUFFER_SIZE: Int = 64 * 1024
+
+    /** Encodings tried in order when auto-detecting file encoding. */
+    private val ENCODING_PRIORITY = listOf(
+        StandardCharsets.UTF_8,
+        StandardCharsets.UTF_16,
+        StandardCharsets.UTF_16BE,
+        StandardCharsets.UTF_16LE,
+        StandardCharsets.ISO_8859_1,
+    )
+
+    /** Result of encoding detection. */
+    private data class DetectedEncoding(
+        val charset: Charset,
+        val bomBytes: Int,
+    )
+
+    /** Detect encoding from BOM, fallback to UTF-8. */
+    private fun detectEncoding(path: Path): DetectedEncoding {
+        val bytes = Files.readBytes(path).take(4).toByteArray()
+        return when {
+            bytes.startsWith(byteArrayOf(0xEF.toByte(), 0xBB.toByte(), 0xBF.toByte())) ->
+                DetectedEncoding(StandardCharsets.UTF_8, 3)
+            bytes.startsWith(byteArrayOf(0xFE.toByte(), 0xFF.toByte())) ->
+                DetectedEncoding(StandardCharsets.UTF_16BE, 2)
+            bytes.startsWith(byteArrayOf(0xFF.toByte(), 0xFE.toByte())) ->
+                DetectedEncoding(StandardCharsets.UTF_16LE, 2)
+            else -> DetectedEncoding(StandardCharsets.UTF_8, 0)
+        }
+    }
+
+    /** Create a decoder that replaces malformed sequences instead of throwing. */
+    private fun createDecoder(charset: Charset): CharsetDecoder =
+        charset.newDecoder()
+            .onMalformedInput(CodingErrorAction.REPLACE)
+            .onUnmappableCharacter(CodingErrorAction.REPLACE)
 
     data class BoundedLine(
         val text: String,
@@ -64,29 +103,54 @@ object FileReadingService {
             val fileSize = channel.size()
             val start = startByteOffset.coerceAtMost(fileSize)
             channel.position(start)
+
+            val detected = detectEncoding(path)
+            val decoder = createDecoder(detected.charset)
+            val bomOffset = if (start == 0L) detected.bomBytes.toLong() else 0L
+            val adjustedStart = start + bomOffset
+
+            if (adjustedStart > fileSize) {
+                return LinePage(
+                    records = emptyList(),
+                    nextByteOffset = fileSize,
+                    nextLineNumber = firstLineNumber,
+                    bytesRead = 0L,
+                    fileSize = fileSize,
+                    hasMore = false,
+                    nextPageStartsInsideRecord = false,
+                    partialRecordWaiting = false,
+                )
+            }
+
+            channel.position(adjustedStart)
             BufferedInputStream(Channels.newInputStream(channel), BUFFER_SIZE).use { input ->
                 val records = mutableListOf<BoundedLine>()
                 var bytesRead = 0L
                 var nextLineNumber = firstLineNumber
                 var insideRecord = startsInsideRecord
                 var partialRecordWaiting = false
+                val byteBuffer = ByteBuffer.allocate(BUFFER_SIZE)
+                val charBuffer = java.nio.CharBuffer.allocate(BUFFER_SIZE * 2)
 
                 if (insideRecord) {
                     val skipped = skipToRecordEnd(
                         input = input,
                         maxBytes = maxPageBytes,
-                        remainingFileBytes = fileSize - start,
+                        remainingFileBytes = fileSize - adjustedStart,
                         isCancelled = isCancelled,
                     )
                     bytesRead += skipped.bytesConsumed
                     insideRecord = !skipped.reachedRecordEnd
                 }
 
-                while (!insideRecord && records.size < maxEntries && bytesRead < maxPageBytes && start + bytesRead < fileSize) {
+                while (!insideRecord && records.size < maxEntries && bytesRead < maxPageBytes && adjustedStart + bytesRead < fileSize) {
                     if (isCancelled()) throw CancellationException("Log loading cancelled")
-                    val recordStart = start + bytesRead
+                    val recordStart = adjustedStart + bytesRead
                     val line = readBoundedLine(
                         input = input,
+                        decoder = decoder,
+                        byteBuffer = byteBuffer,
+                        charBuffer = charBuffer,
                         maxRecordBytes = maxRecordBytes,
                         remainingFileBytes = fileSize - recordStart,
                         isCancelled = isCancelled,
@@ -115,8 +179,8 @@ object FileReadingService {
                     records += BoundedLine(
                         text = line.text,
                         lineNumber = nextLineNumber,
-                        startByte = recordStart,
-                        endByte = recordStart + line.bytesConsumed,
+                        startByte = recordStart - bomOffset,
+                        endByte = recordStart + line.bytesConsumed - bomOffset,
                         truncated = line.truncated,
                     )
                     nextLineNumber++
@@ -124,7 +188,7 @@ object FileReadingService {
                         val skipped = skipToRecordEnd(
                             input = input,
                             maxBytes = maxPageBytes - bytesRead,
-                            remainingFileBytes = fileSize - (start + bytesRead),
+                            remainingFileBytes = fileSize - (adjustedStart + bytesRead),
                             isCancelled = isCancelled,
                         )
                         bytesRead += skipped.bytesConsumed
@@ -132,7 +196,7 @@ object FileReadingService {
                     }
                 }
 
-                val nextByteOffset = start + bytesRead
+                val nextByteOffset = (start + bytesRead + bomOffset).coerceAtMost(fileSize)
                 return LinePage(
                     records = records,
                     nextByteOffset = nextByteOffset,
@@ -178,6 +242,9 @@ object FileReadingService {
 
     private fun readBoundedLine(
         input: InputStream,
+        decoder: CharsetDecoder,
+        byteBuffer: java.nio.ByteBuffer,
+        charBuffer: java.nio.CharBuffer,
         maxRecordBytes: Int,
         remainingFileBytes: Long,
         isCancelled: () -> Boolean,
@@ -212,8 +279,20 @@ object FileReadingService {
         if (!hasContent) return null
         val bytes = content.toByteArray()
         val contentLength = if (bytes.lastOrNull() == '\r'.code.toByte()) bytes.size - 1 else bytes.size
+
+        byteBuffer.clear()
+        charBuffer.clear()
+        byteBuffer.put(bytes, 0, contentLength)
+        byteBuffer.flip()
+        val decodeResult = decoder.decode(byteBuffer, charBuffer, true)
+        if (decodeResult.isError) {
+            decodeResult.throwException()
+        }
+        charBuffer.flip()
+        val text = charBuffer.toString()
+
         return BoundedRead(
-            text = String(bytes, 0, contentLength, StandardCharsets.UTF_8),
+            text = text,
             bytesConsumed = bytesConsumed,
             truncated = truncated,
             terminatedByNewline = terminatedByNewline,

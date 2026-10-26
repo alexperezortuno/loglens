@@ -1,159 +1,127 @@
 # LogLens
 
-LogLens is an IntelliJ IDEA plugin that brings a dedicated log viewer into the IDE.
+A fast, offline-first log viewer for IntelliJ-based IDEs.
 
-Open `.log`, `.out` and `.txt` files in LogLens with level filtering, plain-text and regex search. LogLens can also follow local processes, Docker containers, and Docker Compose services. Spring Boot, Logback, Log4j, compact timestamp-level, ANSI-formatted and newline-delimited JSON logs are supported. **Optional local AI analysis** (Ollama, OpenAI-compatible endpoints) explains errors, summarizes exceptions, and suggests debugging steps. No network access, no external services required — the whole experience is local-first.
+Open `.log`, `.out`, and `.txt` files in a dedicated ANSI-aware viewer with level filtering, full-text/regex search, tail mode, and stack-trace navigation — all without leaving the IDE.
 
-The technical specification lives in [SPEC.md](SPEC.md) and the iteration plan in [ROADMAP.md](ROADMAP.md). The current source tree implements the **0.1 MVP**, **0.2 developer navigation**, **0.3 advanced viewer**, **0.5 multiple sources**, and **0.6 local AI** capabilities.
+![LogLens Tool Window](docs/images/tool-window.png)
 
 ## Features
 
-- Dedicated **LogLens tool window** anchored to the bottom of the IDE.
-- Opens `.log` and `.out` files directly in an ANSI-aware LogLens file editor.
-- **Open Log File…** action that loads `.log`, `.out`, `.txt` files into the viewer.
-- **Open Process Log…** action that runs a local command and follows its combined stdout/stderr through the same parser and viewer pipeline.
-- **Open Docker Log…** action that follows a local container with `docker logs --follow`.
-- **Open Docker Compose Log…** action that follows one service with `docker compose logs --follow`.
-- ANSI SGR foreground/background colors, bold, italic and underline rendering in the viewer.
-- Newline-delimited JSON parsing with structured metadata and a compact feed/detail layout.
-- **Bounded background file loading** with a 10 MiB/10,000-record initial page, 4 MiB/5,000-record subsequent pages, a 20,000-entry/32 MiB retention cap, and a 1 MiB per-record limit.
-- **Tail mode** with Follow/Pause controls, rotation restart, automatic scrolling, and a new-entry indicator. Tailing evicts the oldest records at the retention cap.
-- Parsing pipeline built around a small `LogParser` interface with a `ParserRegistry`:
-  - `SpringBootLogParser` — Spring Boot / Logback default pattern (timestamp, level, thread, logger).
-  - `LogbackLogParser` — common timestamp/thread/level/logger Logback layouts.
-  - `Log4jLogParser` — common Log4j2 time-first and Log4j 1.x date-first layouts.
-  - `TimestampLevelLogParser` — compact records such as `21:00:27.261 [ERROR] message`.
-  - `JsonLinesLogParser` — one JSON object per line, including structured app/module/function fields.
-  - `PlainTextLogParser` — fallback for arbitrary text files with optional level detection.
-- `LogEntry`, `LogLevel` and `ThrowableInfo` domain types shared by every parser.
-- **Level filter** toggles for `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR`, `FATAL`, and `UNKNOWN` entries.
-- Advanced filters for logger, thread, inclusive date/time range, exclusions, and saved presets.
-- **Trace grouping** with a **Group by trace** toggle for related events that share a `traceId`.
-- **Trace timeline** showing related events, service/logger context, and elapsed time between events.
-- **Statistics** for loaded records: levels over time, ERROR/FATAL frequency, common exceptions, and active loggers.
-- **Search** with plain text, case-sensitive option, and **regular expression** mode; composable with the level filter.
-- **Grouped Java/Kotlin exceptions** with parsed causes, suppressed exceptions, clickable source frames, and source navigation.
-- Copy complete exceptions or individual frames from the exception detail pane.
-- **Optional local AI analysis** (0.6): Explain error, Summarize exception, Find probable cause, Explain stack trace, Find related events, Suggest debugging steps. Supports Ollama and OpenAI-compatible endpoints. Disabled by default.
-- **Persistent preferences** (filter state, search options, AI settings) via `LogLensSettings`.
-- Graceful handling of malformed lines; raw text is always preserved.
-- Unit tests for parsers, stack-trace grouping/navigation, filters, search, AI providers, and bounded file reading.
+- **Multi-format parsing** — Plain text, Spring Boot, Logback, Log4j, JSON Lines, and compact timestamp-level logs
+- **ANSI color support** — SGR colors, backgrounds, and text styles rendered in the viewer
+- **Level filtering** — Toggle TRACE/DEBUG/INFO/WARN/ERROR/FATAL/UNKNOWN independently
+- **Search** — Plain text, case-sensitive, and regular expression modes; composable with level filters
+- **Stack-trace navigation** — Clickable frames open source files at the exact line
+- **Tail mode** — Follow actively written files with pause/resume, auto-scroll, and new-entry indicator
+- **Large-file support** — Bounded paging (10 MiB/10k records initial, 4 MiB/5k subsequent), 20k record/32 MiB retention
+- **Observability** — Trace/group by traceId/spanId/requestId, timeline view, log statistics
+- **Local AI (optional)** — Explain errors, summarize exceptions, find probable causes via Ollama or OpenAI-compatible endpoints
+- **Multiple sources** — Local files, Docker containers, Docker Compose services, local processes
 
-## Tech Stack
+## Supported IDEs
 
-- **Language:** Kotlin 2.0.21 (JVM 21 toolchain).
-- **Platform:** IntelliJ Platform 2024.3 (`com.jetbrains.intellij.platform` Gradle plugin v2.3.0).
-- **Build:** Gradle 9.5.1 with Kotlin DSL (`build.gradle.kts`).
-- **Testing:** JUnit 5 + `kotlin.test`.
+| IDE | Since Build | Until Build |
+|-----|-------------|-------------|
+| IntelliJ IDEA Community | 2024.3 (243) | 2025.3 (253.*) |
+| IntelliJ IDEA Ultimate | 2024.3 (243) | 2025.3 (253.*) |
+| Android Studio | 2024.3 (243) | 2025.3 (253.*) |
+| Other IntelliJ Platform IDEs | 2024.3 (243) | 2025.3 (253.*) |
 
-## Requirements
-
-- JDK 21
-- Gradle 8.10 or newer (the project also works with the bundled wrapper `./gradlew`).
+Verified with IntelliJ Plugin Verifier against IC-2024.3, IC-2025.1, IC-2025.2.
 
 ## Installation
 
-Clone the repository and build the plugin locally:
+### From JetBrains Marketplace (recommended)
+
+1. Open **Settings → Plugins → Marketplace**
+2. Search for **LogLens**
+3. Click **Install**
+4. Restart IDE when prompted
+
+### From Disk
+
+1. Download the latest `loglens-<version>.zip` from [GitHub Releases](https://github.com/loglens/loglens/releases)
+2. Open **Settings → Plugins → ⚙️ → Install Plugin from Disk...**
+3. Select the downloaded ZIP
+4. Restart IDE when prompted
+
+### From Source (Development)
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/loglens/loglens.git
 cd loglens
-./gradlew build
+./gradlew buildPlugin
+# Plugin ZIP at build/distributions/loglens-<version>.zip
 ```
 
-The resulting distribution ZIP is written to `build/distributions/`. Install it in IntelliJ IDEA via **Settings → Plugins → Install Plugin from Disk…** and choose the ZIP.
+## Usage
 
-## Running
+### Opening Logs
 
-After the plugin is installed and the IDE restarted, open `.log`, `.out`, or `.txt` files normally; LogLens starts at the beginning and loads a bounded page in the background. Choose **Load more** to continue, or **Cancel** to stop the current read. Use **Follow** to watch appended records, **Pause** to stop polling, and **Resume** to continue. Use **File → Open Process Log…**, **Open Docker Log…**, or **Open Docker Compose Log…** to follow live local sources; commands are started directly without a shell. Docker must be installed and available on `PATH`. Oversized records show a truncated preview while their remaining bytes are skipped in cancellable chunks. The viewer keeps a bounded in-memory record window and reports when its retention limit is reached. Search and filters apply to records currently loaded. ANSI colors and JSON metadata are preserved. Select an exception to inspect its frames; click a source frame to navigate, or use the copy buttons. **File → Open Log File…** and **Open in LogLens** remain available for explicit loading.
+- **Tool Window**: View → Tool Windows → LogLens, then click **Open Log File…** or drag a `.log`/`.out`/`.txt` file into the tool window
+- **File Editor**: Double-click any `.log` or `.out` file in the Project view — it opens in the LogLens editor
+- **Context Menu**: Right-click a log file → **Open in LogLens**
+- **Docker**: Tools → LogLens → Open Docker Log… / Open Docker Compose Log…
+- **Process**: Tools → LogLens → Open Process Log… (follow a local process by PID or command)
 
-To open the tool window without a file, use the **Window → LogLens** menu entry.
+### Filtering
 
-## Observability Example
+Click the level badges (TRACE, DEBUG, INFO, WARN, ERROR, FATAL) in the toolbar to toggle visibility. Multiple levels are combined with OR semantics.
 
-LogLens normalizes common correlation fields from JSON logs and key/value text:
+Advanced filters (logger, thread, date/time range, exclusion terms) are available via the funnel icon.
 
-```json
-{"timestamp":"2026-10-07T12:00:01.120Z","level":"INFO","message":"charging payment","trace_id":"f84a91","span_id":"a12b","requestId":"req-42","service.name":"payments","host":"node-a","container.id":"payments-1"}
-```
+### Search
 
-Open the file in LogLens, then enter `f84a91` in the **Trace/Request** filter. The viewer keeps only records matching `traceId`, `spanId`, or `requestId`; the normalized fields are also available in the record metadata and regular search index. The same filter works with plain text records such as:
+Type in the search box for plain-text search. Enable **Regex** for regular expressions. Toggle **Match Case** for case-sensitive matching. Search and level filters compose with AND semantics.
 
-```text
-2026-10-07 12:00:01.120 INFO traceId=f84a91 spanId=a12b service=payments charged payment
-```
+### Tail Mode
 
-Save the filter as a preset with **Save** to reuse it for another log file.
+Click **Follow** to tail an actively written file. New entries appear automatically. Click **Pause** to stop polling without losing position. The **New Entries** button appears when new records arrive while scrolled up — click to jump to the bottom.
+
+### Stack-Trace Navigation
+
+Exceptions are grouped and displayed in the **Exception** tab. Click any frame with a file icon to open that source file at the exact line. Use **Copy Exception** / **Copy Frame** to copy stack traces.
+
+### Observability
+
+- **Trace Timeline** tab: Related events grouped by traceId/spanId/requestId with time deltas
+- **Statistics** tab: Level counts, top exceptions, top loggers, levels over time
+- **Group by Trace** toggle: Collapse related events under trace headers
+
+## Configuration
+
+Open **Settings → Tools → LogLens** to configure:
+
+- Default level filter state
+- Search preferences (case sensitivity, regex default)
+- Tail polling interval
+- Retention limits
+- AI provider (Ollama, OpenAI-compatible) and model
+
+## Screenshots
+
+| Tool Window | File Editor | Stack Trace |
+|-------------|-------------|-------------|
+| ![Tool Window](docs/images/tool-window.png) | ![File Editor](docs/images/file-editor.png) | ![Stack Trace](docs/images/stack-trace.png) |
 
 ## Development
 
-```bash
-# Compile main + test sources.
-./gradlew compileKotlin compileTestKotlin
+See [DEVELOPMENT.md](docs/DEVELOPMENT.md) for local setup, build commands, and testing.
 
-# Run unit tests.
-./gradlew test
+## Parser API
 
-# Build the plugin distribution.
-./gradlew build
-
-# Run the sandboxed IDE with the plugin loaded for manual smoke testing.
-./gradlew runIde
-```
-
-### Project layout
-
-```
-src/
-├── main/
-│   ├── kotlin/io/loglens/
-│   │   ├── exception/   # StackTraceDetector (used in 0.2 navigation)
-│   │   ├── filter/      # LevelFilter
-│   │   ├── icons/       # Plugin icon loader
-│   │   ├── model/       # LogEntry, LogLevel, ThrowableInfo, StackFrame
-│   │   ├── parser/      # LogParser + JSON-lines, Spring Boot and plain-text parsers
-│   │   ├── search/      # LogSearch (plain / regex)
-│   │   ├── service/     # LogLensProjectService, FileReadingService
-│   │   ├── settings/    # PersistentStateComponent + Settings Configurable
-│   │   ├── ui/          # Tool Window factory, toolbar, viewer
-│   │   └── util/        # RawText helpers (searchable text, summary)
-│   └── resources/
-│       ├── META-INF/plugin.xml
-│       └── icons/loglens.svg
-└── test/
-    ├── kotlin/io/loglens/   # JUnit 5 + kotlin.test specs
-    └── resources/
-```
-
-The application logic stays parser-agnostic: every line of input is normalised into a `LogEntry` before the viewer, filter and search see it.
-
-## Architecture
-
-LogLens uses a thin layered structure on top of the IntelliJ Platform:
-
-- **`LogParser`** — pure parsing abstraction. Implementations never touch UI code.
-- **`ParserRegistry`** — selects the right `LogParser` per file and keeps parser affinity so a single file is not flipped between formats mid-stream.
-- **`LogLensProjectService`** — project-scoped state holder that owns the most recently opened log and broadcasts snapshots to listeners.
-- **`LogViewerPanel`** + **`LogViewerToolbar`** — Swing UI components inside the Tool Window. They consume `LogEntry`s, a `LevelFilter` and a `LogSearch` and never know which parser produced them.
-- **`LogLensSettings`** — `PersistentStateComponent` storing the user's filter/search preferences across IDE restarts.
-
-This honours SPEC §13: features depend on abstractions (parser interface, snapshot model) rather than concrete implementations.
-
-## Security & Privacy
-
-Per SPEC §12:
-
-- Logs never leave the IDE.
-- No network calls, no API keys, no accounts.
-- No telemetry.
-
-## Contributing
-
-1. Fork the repository.
-2. Create a feature branch.
-3. `./gradlew test` must pass before submitting a PR.
-4. Submit a Pull Request targeting the appropriate milestone in `ROADMAP.md`.
+See [PARSER_API.md](docs/PARSER_API.md) for extending LogLens with custom parsers.
 
 ## License
 
-MIT — see `LICENSE`.
+Apache-2.0 — see [LICENSE](LICENSE) for details.
+
+## Links
+
+- [User Guide](docs/USER_GUIDE.md)
+- [Parser API](docs/PARSER_API.md)
+- [Development Guide](docs/DEVELOPMENT.md)
+- [Changelog](CHANGELOG.md)
+- [Issues](https://github.com/loglens/loglens/issues)
+- [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/XXXXXX-loglens)

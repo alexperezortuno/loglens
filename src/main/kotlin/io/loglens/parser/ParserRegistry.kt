@@ -15,7 +15,10 @@ import io.loglens.util.ObservabilityMetadata
  *
  * This per-file affinity prevents the viewer from flipping parsers mid-file
  * when, for example, a plain-text comment happens to look like a level.
+ *
+ * @see ParserApi for versioning and stability guarantees.
  */
+@StableApi
 class ParserRegistry(
     private val parsers: List<LogParser>,
 ) {
@@ -36,6 +39,7 @@ class ParserRegistry(
      * currently active parser already supports the line it is preferred so
      * we don't bounce between formats inside a single file.
      */
+    @StableApi
     fun selectParser(line: String): LogParser {
         return selectParserFor(AnsiCodes.strip(line))
     }
@@ -63,6 +67,7 @@ class ParserRegistry(
      * parser.parse(line, lineNumber)
      * ```
      */
+    @StableApi
     fun parse(line: String, lineNumber: Int? = null): LogEntry {
         val normalizedLine = AnsiCodes.strip(line)
         val parser = selectParserFor(normalizedLine)
@@ -70,12 +75,14 @@ class ParserRegistry(
     }
 
     /** Drop the cached affinity. Call when switching files. */
+    @StableApi
     fun reset() {
         activeParser = parsers.last()
     }
 
     companion object {
         /** Default registry with the spec's initial parsers. */
+        @StableApi
         fun defaults(): ParserRegistry = ParserRegistry(
             listOf(
                 JsonLinesLogParser(),

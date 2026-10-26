@@ -2,7 +2,7 @@
 
 A fast, offline-first log viewer for IntelliJ-based IDEs.
 
-Open `.log`, `.out`, and `.txt` files in a dedicated ANSI-aware viewer with level filtering, full-text/regex search, tail mode, and stack-trace navigation — all without leaving the IDE.
+Open `.log`, `.out` and `.txt` files in LogLens with level filtering, plain-text and regex search. LogLens can also follow local processes, Docker containers, and Docker Compose services. Spring Boot, Logback, Log4j, compact timestamp-level, ANSI-formatted and newline-delimited JSON logs are supported. No network access, no external services — the whole experience is local-first.
 
 ![LogLens Tool Window](docs/images/tool-window.png)
 
@@ -18,6 +18,47 @@ Open `.log`, `.out`, and `.txt` files in a dedicated ANSI-aware viewer with leve
 - **Observability** — Trace/group by traceId/spanId/requestId, timeline view, log statistics
 - **Local AI (optional)** — Explain errors, summarize exceptions, find probable causes via Ollama or OpenAI-compatible endpoints
 - **Multiple sources** — Local files, Docker containers, Docker Compose services, local processes
+- Dedicated **LogLens tool window** anchored to the bottom of the IDE.
+- Opens `.log` and `.out` files directly in an ANSI-aware LogLens file editor.
+- **Open Log File…** action that loads `.log`, `.out`, `.txt` files into the viewer.
+- **Open Process Log…** action that runs a local command and follows its combined stdout/stderr through the same parser and viewer pipeline.
+- **Open Docker Log…** action that follows a local container with `docker logs --follow`.
+- **Open Docker Compose Log…** action that follows one service with `docker compose logs --follow`.
+- ANSI SGR foreground/background colors, bold, italic and underline rendering in the viewer.
+- Newline-delimited JSON parsing with structured metadata and a compact feed/detail layout.
+- **Bounded background file loading** with a 10 MiB/10,000-record initial page, 4 MiB/5,000-record subsequent pages, a 20,000-entry/32 MiB retention cap, and a 1 MiB per-record limit.
+- **Tail mode** with Follow/Pause controls, rotation restart, automatic scrolling, and a new-entry indicator. Tailing evicts the oldest records at the retention cap.
+- Parsing pipeline built around a small `LogParser` interface with a `ParserRegistry`:
+  - `SpringBootLogParser` — Spring Boot / Logback default pattern (timestamp, level, thread, logger).
+  - `LogbackLogParser` — common timestamp/thread/level/logger Logback layouts.
+  - `Log4jLogParser` — common Log4j2 time-first and Log4j 1.x date-first layouts.
+  - `TimestampLevelLogParser` — compact records such as `21:00:27.261 [ERROR] message`.
+  - `JsonLinesLogParser` — one JSON object per line, including structured app/module/function fields.
+  - `PlainTextLogParser` — fallback for arbitrary text files with optional level detection.
+- `LogEntry`, `LogLevel` and `ThrowableInfo` domain types shared by every parser.
+- **Level filter** toggles for `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR`, `FATAL`, and `UNKNOWN` entries.
+- Advanced filters for logger, thread, inclusive date/time range, exclusions, and saved presets.
+- **Trace grouping** with a **Group by trace** toggle for related events that share a `traceId`.
+- **Trace timeline** showing related events, service/logger context, and elapsed time between events.
+- **Statistics** for loaded records: levels over time, ERROR/FATAL frequency, common exceptions, and active loggers.
+- **Search** with plain text, case-sensitive option, and **regular expression** mode; composable with the level filter.
+- **Grouped Java/Kotlin exceptions** with parsed causes, suppressed exceptions, clickable source frames, and source navigation.
+- Copy complete exceptions or individual frames from the exception detail pane.
+- **Persistent preferences** (filter state, search options) via `LogLensSettings`.
+- Graceful handling of malformed lines; raw text is always preserved.
+- Unit tests for parsers, stack-trace grouping/navigation, filters, search and bounded file reading.
+
+## Tech Stack
+
+- **Language:** Kotlin 2.0.21 (JVM 21 toolchain).
+- **Platform:** IntelliJ Platform 2024.3 (`com.jetbrains.intellij.platform` Gradle plugin v2.3.0).
+- **Build:** Gradle 9.5.1 with Kotlin DSL (`build.gradle.kts`).
+- **Testing:** JUnit 5 + `kotlin.test`.
+
+## Requirements
+
+- JDK 21
+- Gradle 8.10 or newer (the project also works with the bundled wrapper `./gradlew`).
 
 ## Supported IDEs
 
@@ -38,6 +79,7 @@ Verified with IntelliJ Plugin Verifier against IC-2024.3, IC-2025.1, IC-2025.2.
 2. Search for **LogLens**
 3. Click **Install**
 4. Restart IDE when prompted
+After the plugin is installed and the IDE restarted, open `.log`, `.out`, or `.txt` files normally; LogLens starts at the beginning and loads a bounded page in the background. Choose **Load more** to continue, or **Cancel** to stop the current read. Use **Follow** to watch appended records, **Pause** to stop polling, and **Resume** to continue. Use **File → Open Process Log…**, **Open Docker Log…**, or **Open Docker Compose Log…** to follow live local sources; commands are started directly without a shell. Docker must be installed and available on `PATH`. Oversized records show a truncated preview while their remaining bytes are skipped in cancellable chunks. The viewer keeps a bounded in-memory record window and reports when its retention limit is reached. Search and filters apply to records currently loaded. ANSI colors and JSON metadata are preserved. Select an exception to inspect its frames; click a source frame to navigate, or use the copy buttons. **File → Open Log File…** and **Open in LogLens** remain available for explicit loading.
 
 ### From Disk
 

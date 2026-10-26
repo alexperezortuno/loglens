@@ -1,0 +1,106 @@
+name: Pull Request
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      - name: Compile
+        run: ./gradlew compileKotlin --no-daemon
+
+      - name: Run tests
+        run: ./gradlew test --no-daemon
+
+      - name: Build plugin
+        run: ./gradlew buildPlugin --no-daemon
+
+      - name: Verify plugin compatibility
+        run: ./gradlew verifyPlugin --no-daemon
+        continue-on-error: true
+
+      - name: Upload plugin artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: loglens-plugin
+          path: build/distributions/loglens-*.zip
+          retention-days: 7
+
+      - name: Upload test reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-reports
+          path: build/reports/tests/
+          retention-days: 7
+
+      - name: Upload verification reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: verification-reports
+          path: build/reports/pluginVerifier/
+          retention-days: 7
+
+  check-version:
+    name: Check Version Consistency
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract version from gradle.properties
+        id: gradle_props
+        run: |
+          VERSION=$(grep '^pluginVersion=' gradle.properties | cut -d'=' -f2)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Extract version from plugin.xml
+        id: plugin_xml
+        run: |
+          VERSION=$(grep '<version>' src/main/resources/META-INF/plugin.xml | head -1 | sed 's/.*<version>\(.*\)<\/version>.*/\1/')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Verify version match
+        run: |
+          if [ "${{ steps.gradle_props.outputs.version }}" != "${{ steps.plugin_xml.outputs.version }}" ]; then
+            echo "Version mismatch: gradle.properties=${{ steps.gradle_props.outputs.version }} plugin.xml=${{ steps.plugin_xml.outputs.version }}"
+            exit 1
+          fi
+          echo "Versions match: ${{ steps.gradle_props.outputs.version }}"
+
+      - name: Verify version format (semver)
+        run: |
+          VERSION="${{ steps.gradle_props.outputs.version }}"
+          if [[ ! $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?(\+[a-zA-Z0-9.-]+)?$ ]]; then
+            echo "Version '$VERSION' does not follow semantic versioning"
+            exit 1
+          fi
+          echo "Version format valid: $VERSION"

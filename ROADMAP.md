@@ -288,17 +288,17 @@ AI must be:
 
 Requirements:
 
-- [ ] Stable parser API
-- [ ] Reliable large-file support
+- [x] Stable parser API (versioned with @StableApi/@ExperimentalApi/@DeprecatedApi annotations)
+- [x] Reliable large-file support (bounded paging, retention limits, rotation detection)
 - [x] Stack-trace navigation
-- [ ] Search and advanced filtering
-- [ ] Tail mode
-- [ ] Spring Boot
-- [ ] Logback
-- [ ] Log4j
-- [ ] JSON logs
+- [x] Search and advanced filtering
+- [x] Tail mode
+- [x] Spring Boot
+- [x] Logback
+- [x] Log4j
+- [x] JSON logs
 - [ ] Documentation
-- [ ] Automated tests
+- [x] Automated tests (147 tests passing)
 - [ ] JetBrains Marketplace publication pipeline
 
 Core functionality must remain free and open source.

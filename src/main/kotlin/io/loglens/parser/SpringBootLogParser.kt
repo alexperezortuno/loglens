@@ -19,6 +19,7 @@ import io.loglens.model.LogLevel
  *  - Failure modes collapse to UNKNOWN while preserving `raw`.
  *  - A throwable header in the extracted message is surfaced via [StackTraceDetector.peek].
  */
+@StableApi
 class SpringBootLogParser : LogParser {
 
     override fun supports(line: String): Boolean {

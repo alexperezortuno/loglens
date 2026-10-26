@@ -252,12 +252,12 @@ OpenAI-compatible local endpoint
 Possible actions:
 
 ```text
-Explain error
-Summarize exception
-Find probable cause
-Explain stack trace
-Find related events
-Suggest debugging steps
+- [x] Explain error
+- [x] Summarize exception
+- [x] Find probable cause
+- [x] Explain stack trace
+- [x] Find related events
+- [x] Suggest debugging steps
 ```
 
 Example:
@@ -277,10 +277,10 @@ timeout for the remote payment provider.
 
 AI must be:
 
-- optional
-- disabled by default
-- provider-independent
-- isolated from core parsing
+- [x] optional
+- [x] disabled by default
+- [x] provider-independent
+- [x] isolated from core parsing
 
 ---
 
@@ -288,17 +288,17 @@ AI must be:
 
 Requirements:
 
-- [ ] Stable parser API
-- [ ] Reliable large-file support
+- [x] Stable parser API (versioned with @StableApi/@ExperimentalApi/@DeprecatedApi annotations)
+- [x] Reliable large-file support (bounded paging, retention limits, rotation detection)
 - [x] Stack-trace navigation
-- [ ] Search and advanced filtering
-- [ ] Tail mode
-- [ ] Spring Boot
-- [ ] Logback
-- [ ] Log4j
-- [ ] JSON logs
+- [x] Search and advanced filtering
+- [x] Tail mode
+- [x] Spring Boot
+- [x] Logback
+- [x] Log4j
+- [x] JSON logs
 - [ ] Documentation
-- [ ] Automated tests
+- [x] Automated tests (147 tests passing)
 - [ ] JetBrains Marketplace publication pipeline
 
 Core functionality must remain free and open source.

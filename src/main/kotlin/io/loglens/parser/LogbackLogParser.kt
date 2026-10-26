@@ -13,6 +13,7 @@ import io.loglens.model.LogLevel
  * fractional seconds, and an optional trailing timezone. Custom PatternLayout
  * configurations remain out of scope.
  */
+@StableApi
 class LogbackLogParser : LogParser {
 
     override fun supports(line: String): Boolean {

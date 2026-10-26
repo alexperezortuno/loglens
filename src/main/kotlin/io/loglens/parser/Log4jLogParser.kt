@@ -12,6 +12,7 @@ import io.loglens.model.LogLevel
  * It also accepts the common Log4j 1.x date-first layout:
  * `2026-10-01 10:30:25,123 INFO [main] com.example.App - message`.
  */
+@StableApi
 class Log4jLogParser : LogParser {
 
     override fun supports(line: String): Boolean =

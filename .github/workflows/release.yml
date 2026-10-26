@@ -1,0 +1,233 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g., v1.0.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  validate:
+    name: Validate Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      version: ${{ steps.extract_version.outputs.version }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract version from tag
+        id: extract_version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ github.event.inputs.version }}"
+          else
+            TAG="${{ github.ref_name }}"
+          fi
+          VERSION=${TAG#v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Setup JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      - name: Verify version consistency
+        run: |
+          GRADLE_VERSION=$(grep '^pluginVersion=' gradle.properties | cut -d'=' -f2)
+          PLUGIN_XML_VERSION=$(grep '<version>' src/main/resources/META-INF/plugin.xml | head -1 | sed 's/.*<version>\(.*\)<\/version>.*/\1/')
+          TAG_VERSION="${{ steps.extract_version.outputs.version }}"
+
+          echo "Tag version: $TAG_VERSION"
+          echo "gradle.properties version: $GRADLE_VERSION"
+          echo "plugin.xml version: $PLUGIN_XML_VERSION"
+
+          if [ "$GRADLE_VERSION" != "$TAG_VERSION" ] || [ "$PLUGIN_XML_VERSION" != "$TAG_VERSION" ]; then
+            echo "Version mismatch!"
+            exit 1
+          fi
+          echo "All versions match: $TAG_VERSION"
+
+  test:
+    name: Run Tests
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      - name: Run all tests
+        run: ./gradlew test --no-daemon
+
+      - name: Upload test reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-reports
+          path: build/reports/tests/
+          retention-days: 30
+
+  build:
+    name: Build Plugin
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      plugin_path: ${{ steps.plugin_path.outputs.path }}
+      checksum: ${{ steps.checksum.outputs.value }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      - name: Build plugin
+        run: ./gradlew buildPlugin --no-daemon
+
+      - name: Verify plugin
+        run: ./gradlew verifyPlugin --no-daemon
+        continue-on-error: true
+
+      - name: Get plugin path
+        id: plugin_path
+        run: |
+          PLUGIN=$(ls build/distributions/loglens-*.zip | head -1)
+          echo "path=$PLUGIN" >> $GITHUB_OUTPUT
+
+      - name: Generate SHA-256 checksum
+        id: checksum
+        run: |
+          PLUGIN="${{ steps.plugin_path.outputs.path }}"
+          CHECKSUM=$(sha256sum "$PLUGIN" | cut -d' ' -f1)
+          echo "value=$CHECKSUM" >> $GITHUB_OUTPUT
+          echo "$CHECKSUM  $(basename $PLUGIN)" > "${PLUGIN}.sha256"
+
+      - name: Upload plugin artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: loglens-plugin
+          path: |
+            build/distributions/loglens-*.zip
+            build/distributions/loglens-*.zip.sha256
+          retention-days: 90
+
+      - name: Upload verification reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: verification-reports
+          path: build/reports/pluginVerifier/
+          retention-days: 30
+
+  release:
+    name: Create GitHub Release
+    needs: [validate, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Download plugin artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: loglens-plugin
+          path: artifacts
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.validate.outputs.version }}
+          name: LogLens ${{ needs.validate.outputs.version }}
+          body_path: CHANGELOG.md
+          files: |
+            artifacts/loglens-*.zip
+            artifacts/loglens-*.zip.sha256
+          draft: false
+          prerelease: false
+          generate_release_notes: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish-marketplace:
+    name: Publish to JetBrains Marketplace
+    needs: [validate, build, release]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: release
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download plugin artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: loglens-plugin
+          path: artifacts
+
+      - name: Setup JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      - name: Publish to Marketplace
+        run: |
+          PLUGIN=$(ls artifacts/loglens-*.zip | head -1)
+          ./gradlew publishPlugin -PpluginFile="$PLUGIN" --no-daemon
+        env:
+          PUBLISH_TOKEN: ${{ secrets.PUBLISH_TOKEN }}
+          # Optional signing
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+          SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
+          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}

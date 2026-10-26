@@ -16,6 +16,7 @@ import io.loglens.exception.StackTraceDetector
  * which is enough to catch both `10:30:25 INFO  ...` and `INFO: ...` shapes
  * without false-positives on prose containing the word "INFO".
  */
+@StableApi
 class PlainTextLogParser : LogParser {
 
     override fun supports(line: String): Boolean = line.isNotEmpty()

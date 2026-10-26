@@ -1,6 +1,6 @@
 package io.loglens.service
 
-import com.intellij.openapi.diagnostic.logger
+import com.intellij.openapi.diagnostic.Logger
 import java.io.BufferedReader
 import java.io.BufferedInputStream
 import java.io.ByteArrayOutputStream
@@ -21,7 +21,7 @@ import java.util.concurrent.CancellationException
 /** Bounded page reads for the viewer, plus small-file streaming helpers for tests. */
 object FileReadingService {
 
-    private val log = logger<FileReadingService>()
+    private val log = Logger.getInstance(FileReadingService::class.java)
 
     /** Default chunk size: 64 KiB — large enough for fast scans, small enough
      *  to remain predictable on small files. */
@@ -44,13 +44,13 @@ object FileReadingService {
 
     /** Detect encoding from BOM, fallback to UTF-8. */
     private fun detectEncoding(path: Path): DetectedEncoding {
-        val bytes = Files.readBytes(path).take(4).toByteArray()
+        val bytes = Files.readAllBytes(path).take(4).toByteArray()
         return when {
-            bytes.startsWith(byteArrayOf(0xEF.toByte(), 0xBB.toByte(), 0xBF.toByte())) ->
+            bytes.size >= 3 && bytes[0] == 0xEF.toByte() && bytes[1] == 0xBB.toByte() && bytes[2] == 0xBF.toByte() ->
                 DetectedEncoding(StandardCharsets.UTF_8, 3)
-            bytes.startsWith(byteArrayOf(0xFE.toByte(), 0xFF.toByte())) ->
+            bytes.size >= 2 && bytes[0] == 0xFE.toByte() && bytes[1] == 0xFF.toByte() ->
                 DetectedEncoding(StandardCharsets.UTF_16BE, 2)
-            bytes.startsWith(byteArrayOf(0xFF.toByte(), 0xFE.toByte())) ->
+            bytes.size >= 2 && bytes[0] == 0xFF.toByte() && bytes[1] == 0xFE.toByte() ->
                 DetectedEncoding(StandardCharsets.UTF_16LE, 2)
             else -> DetectedEncoding(StandardCharsets.UTF_8, 0)
         }
@@ -307,8 +307,11 @@ object FileReadingService {
      * navigated later.
      */
     fun forEachLine(path: Path, action: (line: String, lineNumber: Int) -> Unit) {
+        val detected = detectEncoding(path)
+        val decoder = createDecoder(detected.charset)
         Files.newInputStream(path).use { stream ->
-            forEachLineStream(stream, action)
+            if (detected.bomBytes > 0) stream.skip(detected.bomBytes.toLong())
+            forEachLineStream(stream, decoder, action)
         }
     }
 
@@ -320,21 +323,61 @@ object FileReadingService {
      */
     fun forEachLineStream(
         stream: InputStream,
+        decoder: CharsetDecoder,
         action: (line: String, lineNumber: Int) -> Unit,
     ) {
-        BufferedReader(InputStreamReader(stream, StandardCharsets.UTF_8), BUFFER_SIZE).use { reader ->
-            var number = 1
-            var line: String? = reader.readLine()
-            while (line != null) {
+        val byteBuffer = ByteBuffer.allocate(BUFFER_SIZE)
+        val charBuffer = java.nio.CharBuffer.allocate(BUFFER_SIZE * 2)
+        val content = ByteArrayOutputStream(BUFFER_SIZE)
+        var number = 1
+        var bytesConsumed = 0L
+
+        while (true) {
+            val next = stream.read()
+            if (next < 0) break
+            bytesConsumed++
+            if (next == '\n'.code) {
+                byteBuffer.clear()
+                charBuffer.clear()
+                byteBuffer.put(content.toByteArray())
+                byteBuffer.flip()
+                val decodeResult = decoder.decode(byteBuffer, charBuffer, true)
+                if (decodeResult.isError) decodeResult.throwException()
+                charBuffer.flip()
                 try {
-                    action(line, number)
+                    action(charBuffer.toString(), number)
                 } catch (e: Exception) {
                     log.warn("Error while processing line $number", e)
                 }
                 number++
-                line = reader.readLine()
+                content.reset()
+                continue
+            }
+            content.write(next)
+        }
+        if (content.size() > 0) {
+            byteBuffer.clear()
+            charBuffer.clear()
+            byteBuffer.put(content.toByteArray())
+            byteBuffer.flip()
+            val decodeResult = decoder.decode(byteBuffer, charBuffer, true)
+            if (decodeResult.isError) decodeResult.throwException()
+            charBuffer.flip()
+            try {
+                action(charBuffer.toString(), number)
+            } catch (e: Exception) {
+                log.warn("Error while processing line $number", e)
             }
         }
+    }
+
+    fun forEachLineStream(
+        stream: InputStream,
+        action: (line: String, lineNumber: Int) -> Unit,
+    ) {
+        forEachLineStream(stream, StandardCharsets.UTF_8.newDecoder()
+            .onMalformedInput(CodingErrorAction.REPLACE)
+            .onUnmappableCharacter(CodingErrorAction.REPLACE), action)
     }
 
     /** Read the entire content as a UTF-8 string for tests and very small files only. */

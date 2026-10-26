@@ -2,7 +2,7 @@
 
 LogLens is an IntelliJ IDEA plugin that brings a dedicated log viewer into the IDE.
 
-Open `.log`, `.out` and `.txt` files in LogLens with level filtering, plain-text and regex search. Spring Boot, Logback, Log4j, compact timestamp-level, ANSI-formatted and newline-delimited JSON logs are supported. No network access, no external services — the whole experience is local-first.
+Open `.log`, `.out` and `.txt` files in LogLens with level filtering, plain-text and regex search. LogLens can also follow local processes, Docker containers, and Docker Compose services. Spring Boot, Logback, Log4j, compact timestamp-level, ANSI-formatted and newline-delimited JSON logs are supported. No network access, no external services — the whole experience is local-first.
 
 The technical specification lives in [SPEC.md](SPEC.md) and the iteration plan in [ROADMAP.md](ROADMAP.md). The current source tree implements the **0.1 MVP**, **0.2 developer navigation**, and selected **0.3 advanced viewer** capabilities.
 
@@ -11,6 +11,9 @@ The technical specification lives in [SPEC.md](SPEC.md) and the iteration plan i
 - Dedicated **LogLens tool window** anchored to the bottom of the IDE.
 - Opens `.log` and `.out` files directly in an ANSI-aware LogLens file editor.
 - **Open Log File…** action that loads `.log`, `.out`, `.txt` files into the viewer.
+- **Open Process Log…** action that runs a local command and follows its combined stdout/stderr through the same parser and viewer pipeline.
+- **Open Docker Log…** action that follows a local container with `docker logs --follow`.
+- **Open Docker Compose Log…** action that follows one service with `docker compose logs --follow`.
 - ANSI SGR foreground/background colors, bold, italic and underline rendering in the viewer.
 - Newline-delimited JSON parsing with structured metadata and a compact feed/detail layout.
 - **Bounded background file loading** with a 10 MiB/10,000-record initial page, 4 MiB/5,000-record subsequent pages, a 20,000-entry/32 MiB retention cap, and a 1 MiB per-record limit.
@@ -61,7 +64,7 @@ The resulting distribution ZIP is written to `build/distributions/`. Install it 
 
 ## Running
 
-After the plugin is installed and the IDE restarted, open `.log`, `.out`, or `.txt` files normally; LogLens starts at the beginning and loads a bounded page in the background. Choose **Load more** to continue, or **Cancel** to stop the current read. Use **Follow** to watch appended records, **Pause** to stop polling, and **Resume** to continue. Oversized records show a truncated preview while their remaining bytes are skipped in cancellable chunks. The viewer keeps a bounded in-memory record window and reports when its retention limit is reached. Search and filters apply to records currently loaded. ANSI colors and JSON metadata are preserved. Select an exception to inspect its frames; click a source frame to navigate, or use the copy buttons. **File → Open Log File…** and **Open in LogLens** remain available for explicit loading.
+After the plugin is installed and the IDE restarted, open `.log`, `.out`, or `.txt` files normally; LogLens starts at the beginning and loads a bounded page in the background. Choose **Load more** to continue, or **Cancel** to stop the current read. Use **Follow** to watch appended records, **Pause** to stop polling, and **Resume** to continue. Use **File → Open Process Log…**, **Open Docker Log…**, or **Open Docker Compose Log…** to follow live local sources; commands are started directly without a shell. Docker must be installed and available on `PATH`. Oversized records show a truncated preview while their remaining bytes are skipped in cancellable chunks. The viewer keeps a bounded in-memory record window and reports when its retention limit is reached. Search and filters apply to records currently loaded. ANSI colors and JSON metadata are preserved. Select an exception to inspect its frames; click a source frame to navigate, or use the copy buttons. **File → Open Log File…** and **Open in LogLens** remain available for explicit loading.
 
 To open the tool window without a file, use the **Window → LogLens** menu entry.
 

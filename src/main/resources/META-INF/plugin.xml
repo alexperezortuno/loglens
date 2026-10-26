@@ -74,6 +74,30 @@
         </action>
 
         <action
+            id="io.loglens.OpenProcessLog"
+            class="io.loglens.ui.OpenProcessLogAction"
+            description="Follow a local process in LogLens"
+            text="Open Process Log…">
+            <add-to-group group-id="FileMenu" anchor="after" relative-to-action="io.loglens.OpenLogFile" />
+        </action>
+
+        <action
+            id="io.loglens.OpenDockerLog"
+            class="io.loglens.ui.OpenDockerLogAction"
+            description="Follow a Docker container in LogLens"
+            text="Open Docker Log…">
+            <add-to-group group-id="FileMenu" anchor="after" relative-to-action="io.loglens.OpenProcessLog" />
+        </action>
+
+        <action
+            id="io.loglens.OpenDockerComposeLog"
+            class="io.loglens.ui.OpenDockerComposeLogAction"
+            description="Follow a Docker Compose service in LogLens"
+            text="Open Docker Compose Log…">
+            <add-to-group group-id="FileMenu" anchor="after" relative-to-action="io.loglens.OpenDockerLog" />
+        </action>
+
+        <action
             id="io.loglens.OpenCurrentLogInLogLens"
             class="io.loglens.ui.OpenCurrentLogInLogLensAction"
             description="View this log in LogLens, including ANSI colors"

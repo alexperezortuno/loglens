@@ -218,10 +218,12 @@ Goal:
 
 Potential sources:
 
-- [ ] Local files
+- [x] Local files
 - [ ] Docker containers
 - [ ] Docker Compose
-- [ ] Local processes
+- [x] Local processes
+- [x] Docker containers
+- [x] Docker Compose services
 
 Future candidates:
 

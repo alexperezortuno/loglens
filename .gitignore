@@ -13,3 +13,6 @@ build/
 # IntelliJ Platform cache
 .intellijPlatform/
 AGENTS.md
+graphify-out/
+.opencode
+.agents

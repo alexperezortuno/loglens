@@ -252,12 +252,12 @@ OpenAI-compatible local endpoint
 Possible actions:
 
 ```text
-Explain error
-Summarize exception
-Find probable cause
-Explain stack trace
-Find related events
-Suggest debugging steps
+- [x] Explain error
+- [x] Summarize exception
+- [x] Find probable cause
+- [x] Explain stack trace
+- [x] Find related events
+- [x] Suggest debugging steps
 ```
 
 Example:
@@ -277,10 +277,10 @@ timeout for the remote payment provider.
 
 AI must be:
 
-- optional
-- disabled by default
-- provider-independent
-- isolated from core parsing
+- [x] optional
+- [x] disabled by default
+- [x] provider-independent
+- [x] isolated from core parsing
 
 ---
 

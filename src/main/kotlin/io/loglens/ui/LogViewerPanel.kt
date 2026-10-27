@@ -8,6 +8,7 @@ import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBPanel
 import com.intellij.ui.components.JBScrollPane
+import com.intellij.ui.JBSplitter
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonParser
 import io.loglens.ai.AiAction
@@ -178,12 +179,6 @@ class LogViewerPanel {
         add(heading, BorderLayout.NORTH)
         add(detailTabs, BorderLayout.CENTER)
     }
-    private val splitPane = javax.swing.JSplitPane(javax.swing.JSplitPane.HORIZONTAL_SPLIT, scrollPane, details).apply {
-        resizeWeight = 0.45
-        setDividerLocation(0.45)
-        isContinuousLayout = true
-        border = BorderFactory.createEmptyBorder()
-    }
     private val loadStatus = JLabel("Open a log file")
     private val statisticsSummary = JLabel(" ").apply {
         foreground = JBColor.GRAY
@@ -211,25 +206,52 @@ class LogViewerPanel {
             scrollToBottom()
         }
     }
-    private val loadControls = JPanel(BorderLayout(8, 0)).apply {
-        border = BorderFactory.createEmptyBorder(6, 10, 6, 10)
-        add(loadStatus, BorderLayout.CENTER)
-        add(JPanel(FlowLayout(FlowLayout.RIGHT, 6, 0)).apply {
-            isOpaque = false
-            add(statisticsSummary)
-            add(newEntriesButton)
-            add(followButton)
-            add(loadMoreButton)
-        }, BorderLayout.EAST)
+    private var detailsVisible = loadDetailsVisibility()
+    private val toggleDetailsButton = JButton("⮜ Details").apply {
+        toolTipText = "Toggle details panel (Ctrl+Shift+D)"
+        addActionListener { toggleDetails() }
     }
-    val component: JBPanel<JBPanel<*>> = JBPanel<JBPanel<*>>(BorderLayout()).apply {
-        add(loadControls, BorderLayout.NORTH)
-        add(splitPane, BorderLayout.CENTER)
+
+    private val mainSplitter = JBSplitter(true, loadSplitProportion()).apply {
+        setFirstComponent(scrollPane)
+        setSecondComponent(details)
+        setDividerWidth(8)
+        setHonorComponentsMinimumSize(true)
+        addPropertyChangeListener("proportion") { saveSplitProportion(it.newValue as Float) }
     }
+
+    private val rootPanel = JBPanel<JBPanel<*>>(BorderLayout()).apply {
+        val topBar = JPanel(BorderLayout(8, 0)).apply {
+            border = BorderFactory.createEmptyBorder(6, 10, 6, 10)
+            val left = JPanel(FlowLayout(FlowLayout.LEFT, 6, 0)).apply { isOpaque = false; add(loadStatus) }
+            val right = JPanel(FlowLayout(FlowLayout.RIGHT, 6, 0)).apply {
+                isOpaque = false
+                add(statisticsSummary)
+                add(newEntriesButton)
+                add(followButton)
+                add(loadMoreButton)
+                add(toggleDetailsButton)
+            }
+            add(left, BorderLayout.WEST)
+            add(right, BorderLayout.EAST)
+        }
+        add(topBar, BorderLayout.NORTH)
+        add(mainSplitter, BorderLayout.CENTER)
+    }
+
+    val component: JBPanel<JBPanel<*>> = rootPanel
 
     init {
         frameList.addListSelectionListener { event ->
             if (!event.valueIsAdjusting) copyFrameButton.isEnabled = frameList.selectedValue?.frame != null
+        }
+        applyInitialDetailsVisibility()
+    }
+
+    private fun applyInitialDetailsVisibility() {
+        if (!detailsVisible) {
+            mainSplitter.setSecondComponent(JPanel().apply { isOpaque = false })
+            toggleDetailsButton.text = "⮞ Details"
         }
     }
 
@@ -270,6 +292,27 @@ class LogViewerPanel {
 
     fun setStackFrameNavigationHandler(handler: ((StackFrame, JComponent) -> Unit)?) {
         stackFrameNavigationHandler = handler
+    }
+
+    fun getSplitProportion(): Float = mainSplitter.proportion
+
+    fun setSplitProportion(proportion: Float) {
+        mainSplitter.proportion = proportion.coerceIn(0.1f, 0.9f)
+    }
+
+    fun isDetailsVisible(): Boolean = detailsVisible
+
+    fun setDetailsVisible(visible: Boolean) {
+        if (detailsVisible != visible) {
+            toggleDetails()
+        }
+    }
+
+    fun resetLayout() {
+        mainSplitter.proportion = 0.55f
+        if (!detailsVisible) {
+            toggleDetails()
+        }
     }
 
     fun updateFilter(filter: LevelFilter) {
@@ -712,6 +755,32 @@ class LogViewerPanel {
     private fun scrollToBottom() {
         if (listModel.isEmpty) return
         listComponent.scrollRectToVisible(listComponent.getCellBounds(listModel.size - 1, listModel.size - 1))
+    }
+
+    private fun toggleDetails() {
+        detailsVisible = !detailsVisible
+        if (detailsVisible) {
+            mainSplitter.setSecondComponent(details)
+            toggleDetailsButton.text = "⮜ Details"
+        } else {
+            mainSplitter.setSecondComponent(JPanel().apply { isOpaque = false })
+            toggleDetailsButton.text = "⮞ Details"
+        }
+        mainSplitter.revalidate()
+        mainSplitter.repaint()
+        saveDetailsVisibility()
+    }
+
+    private fun loadSplitProportion(): Float = LogLensSettings.getInstance().state.viewerSplitProportion
+
+    private fun saveSplitProportion(proportion: Float) {
+        LogLensSettings.getInstance().state.viewerSplitProportion = proportion
+    }
+
+    private fun loadDetailsVisibility(): Boolean = LogLensSettings.getInstance().state.detailsPanelVisible
+
+    private fun saveDetailsVisibility() {
+        LogLensSettings.getInstance().state.detailsPanelVisible = detailsVisible
     }
 
     private fun formatBytes(bytes: Long): String = when {

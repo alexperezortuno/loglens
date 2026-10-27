@@ -2,7 +2,7 @@
 <idea-plugin url="https://github.com/loglens/loglens" requireRestart="false">
     <id>cl.glign.tracelens</id>
     <name>TraceLens</name>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
     <vendor>TraceLens</vendor>
     <description><![CDATA[
         A fast, offline-first log viewer for IntelliJ IDEA.
@@ -21,6 +21,12 @@
     <depends>com.intellij.java</depends>
 
     <change-notes><![CDATA[
+        <h3>1.0.1 — Responsive Layout Fix</h3>
+        <ul>
+            <li>Fixed responsive resizing of the TraceLens windows: the log list and details panel now resize dynamically</li>
+            <li>Details panel can be shown or hidden with a toggle, and the tool window toolbar is collapsible</li>
+            <li>Added a reset-layout action to restore the default window layout</li>
+        </ul>
         <h3>1.0.0 — Stable Release</h3>
         <ul>
             <li>Stable Parser API (versioned with @StableApi/@ExperimentalApi/@DeprecatedApi annotations)</li>

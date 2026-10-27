@@ -5,6 +5,15 @@ All notable changes to TraceLens are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2026-10-27
+
+### Fixed
+- **Responsive Layout**: Fixed resizing of the TraceLens windows; the log viewer now uses a splitter for dynamic resizing of the details panel
+
+### Changed
+- Toggleable toolbar and reset-layout action in the tool window
+- Details panel visibility toggle in the log viewer
+
 ## [1.0.0] - 2026-10-26
 
 ### Added

@@ -251,7 +251,7 @@ class LogViewerPanel {
     private fun applyInitialDetailsVisibility() {
         if (!detailsVisible) {
             mainSplitter.setSecondComponent(JPanel().apply { isOpaque = false })
-            toggleDetailsButton.text = "⮞ Details"
+            toggleDetailsButton.text = "- Details"
         }
     }
 

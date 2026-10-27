@@ -1,7 +1,5 @@
 package io.loglens.ai
 
-import java.nio.file.Path
-
 /** Abstraction over local LLM endpoints. */
 sealed interface AiProvider {
     val id: String

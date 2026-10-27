@@ -1,10 +1,15 @@
 package io.loglens.ui
 
 import com.intellij.openapi.project.Project
+import com.intellij.ui.JBSplitter
 import com.intellij.ui.components.JBPanel
 import io.loglens.navigation.StackFrameNavigator
 import io.loglens.service.LogLensProjectService
+import io.loglens.settings.LogLensSettings
 import java.awt.BorderLayout
+import java.awt.FlowLayout
+import javax.swing.JButton
+import javax.swing.JPanel
 
 /**
  * Root panel of the LogLens tool window. Hosts the search/filter toolbar
@@ -20,11 +25,67 @@ class LogLensToolWindowContent(private val project: Project) {
 
     private val viewer: LogViewerPanel = LogViewerPanel()
     private val toolbar: LogViewerToolbar
+    private var toolbarVisible = true
+    private val toggleToolbarButton = JButton("⮝ Toolbar").apply {
+        toolTipText = "Toggle toolbar (Ctrl+Shift+T)"
+        addActionListener { toggleToolbar() }
+    }
+    private val resetLayoutButton = JButton("Reset Layout").apply {
+        toolTipText = "Reset layout to defaults"
+        addActionListener { resetLayout() }
+    }
 
     init {
         toolbar = LogViewerToolbar(viewer)
-        component.add(toolbar.component, BorderLayout.NORTH)
-        component.add(viewer.component, BorderLayout.CENTER)
+        setupLayout()
+        applyInitialToolbarVisibility()
+    }
+
+    private fun setupLayout() {
+        val toolbarWrapper = JPanel(BorderLayout()).apply {
+            add(toolbar.component, BorderLayout.CENTER)
+val buttonPanel = JPanel(FlowLayout(FlowLayout.RIGHT, 4, 0)).apply {
+            isOpaque = false
+            add(toggleToolbarButton)
+            add(resetLayoutButton)
+        }
+            add(buttonPanel, BorderLayout.EAST)
+        }
+
+        val mainSplitter = JBSplitter(false, loadToolbarSplitProportion()).apply {
+            setFirstComponent(toolbarWrapper)
+            setSecondComponent(viewer.component)
+            setDividerWidth(8)
+            setHonorComponentsMinimumSize(true)
+            setResizeEnabled(false)
+            addPropertyChangeListener("proportion") { saveToolbarSplitProportion(it.newValue as Float) }
+        }
+
+        component.add(mainSplitter, BorderLayout.CENTER)
+    }
+
+    private fun loadToolbarSplitProportion(): Float = LogLensSettings.getInstance().state.toolbarVisible?.let { if (it) 0.15f else 0.0f } ?: 0.15f
+
+    private fun saveToolbarSplitProportion(proportion: Float) {
+        // Only save if toolbar is visible
+        if (toolbarVisible) {
+            // We don't persist the proportion for the toolbar splitter since it's fixed
+        }
+    }
+
+    private fun applyInitialToolbarVisibility() {
+        toolbarVisible = LogLensSettings.getInstance().state.toolbarVisible ?: true
+        if (!toolbarVisible) {
+            toggleToolbar()
+        }
+    }
+
+    private fun toggleToolbar() {
+        toolbarVisible = !toolbarVisible
+        LogLensSettings.getInstance().state.toolbarVisible = toolbarVisible
+        toggleToolbarButton.text = if (toolbarVisible) "⮝ Toolbar" else "⮞ Toolbar"
+        component.revalidate()
+        component.repaint()
     }
 
     fun onAttach() {
@@ -39,5 +100,14 @@ class LogLensToolWindowContent(private val project: Project) {
             viewer.update(snapshot)
             toolbar.refreshFromViewer()
         }
+    }
+
+    fun resetLayout() {
+        viewer.resetLayout()
+        toolbarVisible = true
+        LogLensSettings.getInstance().state.toolbarVisible = true
+        toggleToolbarButton.text = "⮝ Toolbar"
+        component.revalidate()
+        component.repaint()
     }
 }

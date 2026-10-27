@@ -146,7 +146,7 @@ jobs:
       - name: Get plugin path
         id: plugin_path
         run: |
-          PLUGIN=$(ls build/distributions/loglens-*.zip | head -1)
+          PLUGIN=$(ls build/distributions/tracelens-*.zip | head -1)
           echo "path=$PLUGIN" >> $GITHUB_OUTPUT
 
       - name: Generate SHA-256 checksum
@@ -160,10 +160,10 @@ jobs:
       - name: Upload plugin artifact
         uses: actions/upload-artifact@v4
         with:
-          name: loglens-plugin
+          name: tracelens-plugin
           path: |
-            build/distributions/loglens-*.zip
-            build/distributions/loglens-*.zip.sha256
+            build/distributions/tracelens-*.zip
+            build/distributions/tracelens-*.zip.sha256
           retention-days: 90
 
       - name: Upload verification reports
@@ -183,18 +183,18 @@ jobs:
       - name: Download plugin artifact
         uses: actions/download-artifact@v4
         with:
-          name: loglens-plugin
+          name: tracelens-plugin
           path: artifacts
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ needs.validate.outputs.version }}
-          name: LogLens ${{ needs.validate.outputs.version }}
+          name: TraceLens ${{ needs.validate.outputs.version }}
           body_path: CHANGELOG.md
           files: |
-            artifacts/loglens-*.zip
-            artifacts/loglens-*.zip.sha256
+            artifacts/tracelens-*.zip
+            artifacts/tracelens-*.zip.sha256
           draft: false
           prerelease: false
           generate_release_notes: false
@@ -214,7 +214,7 @@ jobs:
       - name: Download plugin artifact
         uses: actions/download-artifact@v4
         with:
-          name: loglens-plugin
+          name: tracelens-plugin
           path: artifacts
 
       - name: Setup JDK 21
@@ -232,7 +232,7 @@ jobs:
 
       - name: Publish to Marketplace
         run: |
-          PLUGIN=$(ls artifacts/loglens-*.zip | head -1)
+          PLUGIN=$(ls artifacts/tracelens-*.zip | head -1)
           ./gradlew publishPlugin -PpluginFile="$PLUGIN" --no-daemon
         env:
           PUBLISH_TOKEN: ${{ secrets.PUBLISH_TOKEN }}

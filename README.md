@@ -1,10 +1,10 @@
-# LogLens
+# TraceLens
 
 A fast, offline-first log viewer for IntelliJ-based IDEs.
 
-Open `.log`, `.out` and `.txt` files in LogLens with level filtering, plain-text and regex search. LogLens can also follow local processes, Docker containers, and Docker Compose services. Spring Boot, Logback, Log4j, compact timestamp-level, ANSI-formatted and newline-delimited JSON logs are supported. No network access, no external services — the whole experience is local-first.
+Open `.log`, `.out` and `.txt` files in TraceLens with level filtering, plain-text and regex search. TraceLens can also follow local processes, Docker containers, and Docker Compose services. Spring Boot, Logback, Log4j, compact timestamp-level, ANSI-formatted and newline-delimited JSON logs are supported. No network access, no external services — the whole experience is local-first.
 
-![LogLens Tool Window](docs/images/tool-window.png)
+![TraceLens Tool Window](docs/images/tool-window.png)
 
 ## Features
 
@@ -18,8 +18,8 @@ Open `.log`, `.out` and `.txt` files in LogLens with level filtering, plain-text
 - **Observability** — Trace/group by traceId/spanId/requestId, timeline view, log statistics
 - **Local AI (optional)** — Explain errors, summarize exceptions, find probable causes via Ollama or OpenAI-compatible endpoints
 - **Multiple sources** — Local files, Docker containers, Docker Compose services, local processes
-- Dedicated **LogLens tool window** anchored to the bottom of the IDE.
-- Opens `.log` and `.out` files directly in an ANSI-aware LogLens file editor.
+- Dedicated **TraceLens tool window** anchored to the bottom of the IDE.
+- Opens `.log` and `.out` files directly in an ANSI-aware TraceLens file editor.
 - **Open Log File…** action that loads `.log`, `.out`, `.txt` files into the viewer.
 - **Open Process Log…** action that runs a local command and follows its combined stdout/stderr through the same parser and viewer pipeline.
 - **Open Docker Log…** action that follows a local container with `docker logs --follow`.
@@ -76,14 +76,14 @@ Verified with IntelliJ Plugin Verifier against IC-2024.3, IC-2025.1, IC-2025.2.
 ### From JetBrains Marketplace (recommended)
 
 1. Open **Settings → Plugins → Marketplace**
-2. Search for **LogLens**
+2. Search for **TraceLens**
 3. Click **Install**
 4. Restart IDE when prompted
-After the plugin is installed and the IDE restarted, open `.log`, `.out`, or `.txt` files normally; LogLens starts at the beginning and loads a bounded page in the background. Choose **Load more** to continue, or **Cancel** to stop the current read. Use **Follow** to watch appended records, **Pause** to stop polling, and **Resume** to continue. Use **File → Open Process Log…**, **Open Docker Log…**, or **Open Docker Compose Log…** to follow live local sources; commands are started directly without a shell. Docker must be installed and available on `PATH`. Oversized records show a truncated preview while their remaining bytes are skipped in cancellable chunks. The viewer keeps a bounded in-memory record window and reports when its retention limit is reached. Search and filters apply to records currently loaded. ANSI colors and JSON metadata are preserved. Select an exception to inspect its frames; click a source frame to navigate, or use the copy buttons. **File → Open Log File…** and **Open in LogLens** remain available for explicit loading.
+After the plugin is installed and the IDE restarted, open `.log`, `.out`, or `.txt` files normally; TraceLens starts at the beginning and loads a bounded page in the background. Choose **Load more** to continue, or **Cancel** to stop the current read. Use **Follow** to watch appended records, **Pause** to stop polling, and **Resume** to continue. Use **File → Open Process Log…**, **Open Docker Log…**, or **Open Docker Compose Log…** to follow live local sources; commands are started directly without a shell. Docker must be installed and available on `PATH`. Oversized records show a truncated preview while their remaining bytes are skipped in cancellable chunks. The viewer keeps a bounded in-memory record window and reports when its retention limit is reached. Search and filters apply to records currently loaded. ANSI colors and JSON metadata are preserved. Select an exception to inspect its frames; click a source frame to navigate, or use the copy buttons. **File → Open Log File…** and **Open in TraceLens** remain available for explicit loading.
 
 ### From Disk
 
-1. Download the latest `loglens-<version>.zip` from [GitHub Releases](https://github.com/loglens/loglens/releases)
+1. Download the latest `tracelens-<version>.zip` from [GitHub Releases](https://github.com/loglens/loglens/releases)
 2. Open **Settings → Plugins → ⚙️ → Install Plugin from Disk...**
 3. Select the downloaded ZIP
 4. Restart IDE when prompted
@@ -94,18 +94,18 @@ After the plugin is installed and the IDE restarted, open `.log`, `.out`, or `.t
 git clone https://github.com/loglens/loglens.git
 cd loglens
 ./gradlew buildPlugin
-# Plugin ZIP at build/distributions/loglens-<version>.zip
+# Plugin ZIP at build/distributions/tracelens-<version>.zip
 ```
 
 ## Usage
 
 ### Opening Logs
 
-- **Tool Window**: View → Tool Windows → LogLens, then click **Open Log File…** or drag a `.log`/`.out`/`.txt` file into the tool window
-- **File Editor**: Double-click any `.log` or `.out` file in the Project view — it opens in the LogLens editor
-- **Context Menu**: Right-click a log file → **Open in LogLens**
-- **Docker**: Tools → LogLens → Open Docker Log… / Open Docker Compose Log…
-- **Process**: Tools → LogLens → Open Process Log… (follow a local process by PID or command)
+- **Tool Window**: View → Tool Windows → TraceLens, then click **Open Log File…** or drag a `.log`/`.out`/`.txt` file into the tool window
+- **File Editor**: Double-click any `.log` or `.out` file in the Project view — it opens in the TraceLens editor
+- **Context Menu**: Right-click a log file → **Open in TraceLens**
+- **Docker**: Tools → TraceLens → Open Docker Log… / Open Docker Compose Log…
+- **Process**: Tools → TraceLens → Open Process Log… (follow a local process by PID or command)
 
 ### Filtering
 
@@ -133,7 +133,7 @@ Exceptions are grouped and displayed in the **Exception** tab. Click any frame w
 
 ## Configuration
 
-Open **Settings → Tools → LogLens** to configure:
+Open **Settings → Tools → TraceLens** to configure:
 
 - Default level filter state
 - Search preferences (case sensitivity, regex default)
@@ -153,7 +153,7 @@ See [DEVELOPMENT.md](docs/DEVELOPMENT.md) for local setup, build commands, and t
 
 ## Parser API
 
-See [PARSER_API.md](docs/PARSER_API.md) for extending LogLens with custom parsers.
+See [PARSER_API.md](docs/PARSER_API.md) for extending TraceLens with custom parsers.
 
 ## License
 
@@ -166,4 +166,4 @@ Apache-2.0 — see [LICENSE](LICENSE) for details.
 - [Development Guide](docs/DEVELOPMENT.md)
 - [Changelog](CHANGELOG.md)
 - [Issues](https://github.com/loglens/loglens/issues)
-- [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/XXXXXX-loglens)
+- [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/XXXXXX-tracelens)

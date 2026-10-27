@@ -1,5 +1,6 @@
 package io.loglens.ui
 
+import com.intellij.ide.DataManager
 import com.intellij.openapi.fileEditor.FileEditor
 import com.intellij.openapi.fileEditor.FileEditorState
 import com.intellij.openapi.fileEditor.FileEditorStateLevel
@@ -37,7 +38,10 @@ class LogLensFileEditor(
         viewer.setLoadMoreAction(service::loadMore)
         viewer.setCancelLoadAction(service::cancelLoad)
         viewer.setTailAction(service::toggleTailing)
-        viewer.setStackFrameNavigationHandler { frame, _ -> StackFrameNavigator.navigate(project, frame) }
+        viewer.setStackFrameNavigationHandler { frame, _ ->
+            val dataContext = DataManager.getInstance().getDataContext(root)
+            StackFrameNavigator.navigate(project, frame, dataContext)
+        }
         service.addListener(snapshotListener)
         viewer.update(service.snapshot().takeIf { it.path == filePath } ?: LogLensSnapshot.empty())
         service.openFile(file)

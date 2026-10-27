@@ -1,5 +1,6 @@
 package io.loglens.ui
 
+import com.intellij.ide.DataManager
 import com.intellij.openapi.project.Project
 import com.intellij.ui.JBSplitter
 import com.intellij.ui.components.JBPanel
@@ -93,7 +94,10 @@ val buttonPanel = JPanel(FlowLayout(FlowLayout.RIGHT, 4, 0)).apply {
         viewer.setLoadMoreAction(service::loadMore)
         viewer.setCancelLoadAction(service::cancelLoad)
         viewer.setTailAction(service::toggleTailing)
-        viewer.setStackFrameNavigationHandler { frame, _ -> StackFrameNavigator.navigate(project, frame) }
+        viewer.setStackFrameNavigationHandler { frame, _ ->
+            val dataContext = DataManager.getInstance().getDataContext(component)
+            StackFrameNavigator.navigate(project, frame, dataContext)
+        }
         // Apply current snapshot immediately in case the project already had one.
         service.snapshot().let { viewer.update(it) }
         service.addListener { snapshot ->

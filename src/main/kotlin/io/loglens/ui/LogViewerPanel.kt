@@ -207,7 +207,7 @@ class LogViewerPanel {
         }
     }
     private var detailsVisible = loadDetailsVisibility()
-    private val toggleDetailsButton = JButton("⮜ Details").apply {
+    private val toggleDetailsButton = JButton("- Details").apply {
         toolTipText = "Toggle details panel (Ctrl+Shift+D)"
         addActionListener { toggleDetails() }
     }
@@ -251,7 +251,7 @@ class LogViewerPanel {
     private fun applyInitialDetailsVisibility() {
         if (!detailsVisible) {
             mainSplitter.setSecondComponent(JPanel().apply { isOpaque = false })
-            toggleDetailsButton.text = "- Details"
+            toggleDetailsButton.text = "+ Details"
         }
     }
 
@@ -761,10 +761,10 @@ class LogViewerPanel {
         detailsVisible = !detailsVisible
         if (detailsVisible) {
             mainSplitter.setSecondComponent(details)
-            toggleDetailsButton.text = "⮜ Details"
+            toggleDetailsButton.text = "- Details"
         } else {
             mainSplitter.setSecondComponent(JPanel().apply { isOpaque = false })
-            toggleDetailsButton.text = "⮞ Details"
+            toggleDetailsButton.text = "+ Details"
         }
         mainSplitter.revalidate()
         mainSplitter.repaint()

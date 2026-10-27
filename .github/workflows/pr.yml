@@ -47,8 +47,8 @@ jobs:
       - name: Upload plugin artifact
         uses: actions/upload-artifact@v4
         with:
-          name: loglens-plugin
-          path: build/distributions/loglens-*.zip
+          name: tracelens-plugin
+          path: build/distributions/tracelens-*.zip
           retention-days: 7
 
       - name: Upload test reports

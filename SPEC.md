@@ -1,8 +1,8 @@
-# LogLens — Technical Specification
+# TraceLens — Technical Specification
 
 ## 1. Purpose
 
-LogLens provides a dedicated log exploration experience inside IntelliJ-based IDEs.
+TraceLens provides a dedicated log exploration experience inside IntelliJ-based IDEs.
 
 The plugin must allow developers to inspect application logs without leaving the IDE.
 
@@ -318,7 +318,7 @@ Unknown fields must not cause parsing failures.
 
 # 12. Security and privacy
 
-Core LogLens functionality must be local.
+Core TraceLens functionality must be local.
 
 The plugin must not:
 

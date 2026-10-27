@@ -51,6 +51,10 @@
     ]]></change-notes>
 
     <extensions defaultExtensionNs="com.intellij">
+
+        <!-- JetBrains Marketplace error reporting -->
+        <errorHandler implementation="com.intellij.diagnostic.JetBrainsMarketplaceErrorReportSubmitter"/>
+
         <!-- Tool Window -->
         <toolWindow
             id="TraceLens"

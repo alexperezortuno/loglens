@@ -5,7 +5,6 @@ import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.wm.ToolWindowManager
 import io.loglens.service.LogLensProjectService
-import io.loglens.source.DockerCommands
 import io.loglens.source.LogSource
 
 /** Follows logs from a local Docker container through LogLens. */

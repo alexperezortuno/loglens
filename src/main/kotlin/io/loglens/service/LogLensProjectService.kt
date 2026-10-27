@@ -42,11 +42,13 @@ class LogLensProjectService(private val project: Project) : Disposable {
 
     /** Begin loading [file] asynchronously from its first record. */
     fun openFile(file: VirtualFile) {
+        if (isDisposed) return
         openPath(Path.of(file.path))
     }
 
     /** Begin loading [path] asynchronously from its first record. */
     fun openPath(path: Path) {
+        if (isDisposed) return
         processCapture?.stop()
         processCapture = null
         val session: ActiveLoad
@@ -66,6 +68,7 @@ class LogLensProjectService(private val project: Project) : Disposable {
 
     /** Run a local command and follow its combined stdout/stderr as a log source. */
     fun openProcess(command: List<String>) {
+        if (isDisposed) return
         processCapture?.stop()
         val capture = ProcessLogCapture.start(command)
         try {
@@ -80,6 +83,7 @@ class LogLensProjectService(private val project: Project) : Disposable {
 
     /** Open any supported local source through the shared viewer pipeline. */
     fun openSource(source: LogSource) {
+        if (isDisposed) return
         when (source) {
             is LogSource.File -> openPath(source.path)
             is LogSource.Process -> openProcess(source.command)
@@ -90,6 +94,7 @@ class LogLensProjectService(private val project: Project) : Disposable {
 
     /** Load the next bounded page for the currently open log. */
     fun loadMore() {
+        if (isDisposed) return
         val session: ActiveLoad
         val loadingSnapshot: LogLensSnapshot
         synchronized(lock) {
@@ -105,6 +110,7 @@ class LogLensProjectService(private val project: Project) : Disposable {
 
     /** Start following appended records, or resume a paused follow session. */
     fun toggleTailing() {
+        if (isDisposed) return
         val session: ActiveLoad
         val snapshot: LogLensSnapshot
         val shouldSchedule: Boolean
@@ -133,6 +139,7 @@ class LogLensProjectService(private val project: Project) : Disposable {
 
     /** Stop following while keeping the loaded records available. */
     fun stopTailing() {
+        if (isDisposed) return
         val snapshot: LogLensSnapshot
         synchronized(lock) {
             val session = activeLoad ?: return
@@ -149,6 +156,7 @@ class LogLensProjectService(private val project: Project) : Disposable {
 
     /** Cancel the active read without discarding the records already loaded. */
     fun cancelLoad() {
+        if (isDisposed) return
         val snapshot: LogLensSnapshot
         synchronized(lock) {
             val session = activeLoad ?: return
@@ -178,6 +186,7 @@ class LogLensProjectService(private val project: Project) : Disposable {
     }
 
     private fun schedulePage(session: ActiveLoad, firstPage: Boolean) {
+        if (isDisposed) return
         val future = executor.submit {
             try {
                 synchronized(lock) {
@@ -203,7 +212,7 @@ class LogLensProjectService(private val project: Project) : Disposable {
                     maxRecordBytes = MAX_RECORD_BYTES,
                     startsInsideRecord = session.startsInsideRecord,
                     completeRecordsOnly = session.isTailing,
-                    isCancelled = { Thread.currentThread().isInterrupted || !isActive(session) },
+                    isCancelled = { Thread.currentThread().isInterrupted || !isActive(session) || isDisposed },
                 )
 
                 val emitted = mutableListOf<LogEntry>()
@@ -323,7 +332,9 @@ class LogLensProjectService(private val project: Project) : Disposable {
     }
 
     private fun scheduleTailPoll(session: ActiveLoad) {
+        if (isDisposed) return
         val future = executor.schedule({
+            if (isDisposed) return@schedule
             val snapshot: LogLensSnapshot
             synchronized(lock) {
                 if (activeLoad !== session || !session.isTailing || session.isTailPaused) return@schedule
@@ -341,13 +352,14 @@ class LogLensProjectService(private val project: Project) : Disposable {
 
     /** Build the compact metadata index independently of the bounded viewer cache. */
     private fun scheduleIndex(session: ActiveLoad) {
+        if (isDisposed) return
         val future = executor.submit {
             val registry = ParserRegistry.defaults()
             var offset = 0L
             var lineNumber = 1
             var insideRecord = false
             try {
-                while (isIndexActive(session)) {
+                while (isIndexActive(session) && !isDisposed) {
                     val page = FileReadingService.readPage(
                         path = session.path,
                         startByteOffset = offset,
@@ -356,7 +368,7 @@ class LogLensProjectService(private val project: Project) : Disposable {
                         maxEntries = INDEX_PAGE_ENTRIES,
                         maxRecordBytes = MAX_RECORD_BYTES,
                         startsInsideRecord = insideRecord,
-                        isCancelled = { Thread.currentThread().isInterrupted || !isIndexActive(session) },
+                        isCancelled = { Thread.currentThread().isInterrupted || !isIndexActive(session) || isDisposed },
                     )
                     session.index.setFileSize(page.fileSize)
                     page.records.forEach { record ->
@@ -400,9 +412,10 @@ class LogLensProjectService(private val project: Project) : Disposable {
     }
 
     private fun dispatch(snapshot: LogLensSnapshot) {
+        if (isDisposed) return
         val application = ApplicationManager.getApplication()
         val notify = Runnable {
-            if (project.isDisposed || currentSnapshot !== snapshot) return@Runnable
+            if (project.isDisposed || currentSnapshot !== snapshot || isDisposed) return@Runnable
             listeners.forEach { listener ->
                 try {
                     listener(snapshot)
@@ -420,7 +433,11 @@ class LogLensProjectService(private val project: Project) : Disposable {
         return textCharacters * 2 + ENTRY_OBJECT_OVERHEAD_BYTES
     }
 
+    @Volatile
+    private var isDisposed = false
+
     override fun dispose() {
+        isDisposed = true
         synchronized(lock) {
             activeLoad?.task?.cancel(true)
             activeLoad?.indexTask?.cancel(true)
@@ -429,6 +446,14 @@ class LogLensProjectService(private val project: Project) : Disposable {
             processCapture = null
         }
         executor.shutdownNow()
+        try {
+            if (!executor.awaitTermination(2, TimeUnit.SECONDS)) {
+                log.warn("Executor did not terminate in time during disposal")
+            }
+        } catch (e: InterruptedException) {
+            Thread.currentThread().interrupt()
+            log.warn("Interrupted while waiting for executor termination", e)
+        }
         listeners.clear()
     }
 

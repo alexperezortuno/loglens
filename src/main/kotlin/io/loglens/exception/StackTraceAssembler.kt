@@ -1,7 +1,6 @@
 package io.loglens.exception
 
 import io.loglens.model.LogEntry
-import io.loglens.model.ThrowableInfo
 
 /** Joins physical continuation lines into one bounded logical exception entry. */
 class StackTraceAssembler(

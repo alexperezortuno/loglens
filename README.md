@@ -97,6 +97,20 @@ cd loglens
 # Plugin ZIP at build/distributions/tracelens-<version>.zip
 ```
 
+util commands
+
+```bash
+./gradlew --refresh-dependencies runIde
+```
+
+```bash
+./gradlew clean runIde
+```
+
+```bash
+./gradlew runIde
+```
+
 ## Usage
 
 ### Opening Logs

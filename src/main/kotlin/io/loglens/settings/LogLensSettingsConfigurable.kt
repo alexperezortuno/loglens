@@ -2,9 +2,7 @@ package io.loglens.settings
 
 import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.ui.ComboBox
-import com.intellij.openapi.ui.Messages
 import com.intellij.ui.components.JBLabel
-import com.intellij.ui.components.JBPanel
 import com.intellij.ui.components.JBTextField
 import com.intellij.util.ui.FormBuilder
 import javax.swing.JComponent

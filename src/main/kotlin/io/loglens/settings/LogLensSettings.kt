@@ -47,6 +47,10 @@ class LogLensSettings : PersistentStateComponent<LogLensSettings.State> {
         var aiOpenAiBaseUrl: String = "",
         var aiOpenAiApiKey: String = "",
         var aiOpenAiModel: String = "",
+        // Layout persistence (UX-001)
+        var viewerSplitProportion: Float = 0.55f,
+        var detailsPanelVisible: Boolean = true,
+        var toolbarVisible: Boolean = true,
     )
 
     data class SavedFilter(

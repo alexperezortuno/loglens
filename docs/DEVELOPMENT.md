@@ -1,4 +1,4 @@
-# LogLens Development Guide
+# TraceLens Development Guide
 
 ## Prerequisites
 
@@ -55,7 +55,7 @@ loglens/
 
 | Command | Description |
 |---------|-------------|
-| `./gradlew buildPlugin` | Build plugin ZIP (`build/distributions/loglens-<version>.zip`) |
+| `./gradlew buildPlugin` | Build plugin ZIP (`build/distributions/tracelens-<version>.zip`) |
 | `./gradlew test` | Run all tests |
 | `./gradlew test --tests 'io.loglens.parser.ParserRegistryTest'` | Run specific test class |
 | `./gradlew runIde` | Launch sandbox IDE with plugin installed |
@@ -96,7 +96,7 @@ Test categories:
 ./gradlew runIde
 ```
 
-Launches IntelliJ IDEA Community 2025.1.1 with LogLens installed. Use for:
+Launches IntelliJ IDEA Community 2025.1.1 with TraceLens installed. Use for:
 - Manual UI testing
 - Debugging Swing components
 - Verifying file editor integration
@@ -119,10 +119,10 @@ Sandbox location: `build/idea-sandbox/`
 ./gradlew buildPlugin
 ```
 
-Output: `build/distributions/loglens-<version>.zip`
+Output: `build/distributions/tracelens-<version>.zip`
 
 The ZIP contains:
-- `lib/loglens.jar` — Compiled plugin classes
+- `lib/tracelens.jar` — Compiled plugin classes
 - `META-INF/plugin.xml` — Plugin descriptor (patched with version)
 - `icons/loglens.svg` — Plugin icon
 

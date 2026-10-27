@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <idea-plugin url="https://github.com/loglens/loglens" requireRestart="false">
-    <id>io.loglens.plugin</id>
-    <name>LogLens</name>
+    <id>cl.glign.tracelens</id>
+    <name>TraceLens</name>
     <version>1.0.0</version>
-    <vendor>LogLens</vendor>
+    <vendor>TraceLens</vendor>
     <description><![CDATA[
         A fast, offline-first log viewer for IntelliJ IDEA.
 
-        Open .log and .out files in the ANSI-aware LogLens editor, or load
+        Open .log and .out files in the ANSI-aware TraceLens editor, or load
         .txt files in the dedicated tool window. Includes level filtering,
         full-text and regex search. No network required.
 
@@ -40,7 +40,7 @@
     <extensions defaultExtensionNs="com.intellij">
         <!-- Tool Window -->
         <toolWindow
-            id="LogLens"
+            id="TraceLens"
             anchor="bottom"
             icon="io.loglens.icons.LogLensIcons"
             factoryClass="io.loglens.ui.LogLensToolWindowFactory"
@@ -54,7 +54,7 @@
             parentId="tools"
             instance="io.loglens.settings.LogLensSettingsConfigurable"
             id="io.loglens.settings"
-            displayName="LogLens" />
+            displayName="TraceLens" />
 
         <!-- Persistent application state for filter / search preferences. -->
         <applicationService serviceImplementation="io.loglens.settings.LogLensSettings" />
@@ -64,10 +64,10 @@
     </extensions>
 
     <actions>
-        <action
+<action
             id="io.loglens.OpenLogFile"
             class="io.loglens.ui.OpenLogFileAction"
-            description="Open a log file in LogLens"
+            description="Open a log file in TraceLens"
             icon="io.loglens.icons.LogLensIcons"
             text="Open Log File…">
             <add-to-group group-id="FileMenu" anchor="after" relative-to-action="OpenFile" />
@@ -76,7 +76,7 @@
         <action
             id="io.loglens.OpenProcessLog"
             class="io.loglens.ui.OpenProcessLogAction"
-            description="Follow a local process in LogLens"
+            description="Follow a local process in TraceLens"
             text="Open Process Log…">
             <add-to-group group-id="FileMenu" anchor="after" relative-to-action="io.loglens.OpenLogFile" />
         </action>
@@ -84,15 +84,15 @@
         <action
             id="io.loglens.OpenDockerLog"
             class="io.loglens.ui.OpenDockerLogAction"
-            description="Follow a Docker container in LogLens"
+            description="Follow a Docker container in TraceLens"
             text="Open Docker Log…">
             <add-to-group group-id="FileMenu" anchor="after" relative-to-action="io.loglens.OpenProcessLog" />
         </action>
 
-        <action
+<action
             id="io.loglens.OpenDockerComposeLog"
             class="io.loglens.ui.OpenDockerComposeLogAction"
-            description="Follow a Docker Compose service in LogLens"
+            description="Follow a Docker Compose service in TraceLens"
             text="Open Docker Compose Log…">
             <add-to-group group-id="FileMenu" anchor="after" relative-to-action="io.loglens.OpenDockerLog" />
         </action>
@@ -100,16 +100,16 @@
         <action
             id="io.loglens.OpenCurrentLogInLogLens"
             class="io.loglens.ui.OpenCurrentLogInLogLensAction"
-            description="View this log in LogLens, including ANSI colors"
-            text="Open in LogLens">
+            description="View this log in TraceLens, including ANSI colors"
+            text="Open in TraceLens">
             <add-to-group group-id="EditorPopupMenu" anchor="last" />
         </action>
 
         <action
             id="io.loglens.ToggleLogLensWindow"
             class="io.loglens.ui.ToggleLogLensToolWindowAction"
-            description="Show the LogLens tool window"
+            description="Show the TraceLens tool window"
             icon="io.loglens.icons.LogLensIcons"
-            text="LogLens" />
+            text="TraceLens" />
     </actions>
 </idea-plugin>

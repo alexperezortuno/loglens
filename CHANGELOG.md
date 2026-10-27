@@ -5,6 +5,17 @@ All notable changes to TraceLens are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.2] - 2026-10-27
+
+### Fixed
+- **Stack Frame Navigation**: Ambiguous stack frames are now resolved with a popup chooser (`JBPopupFactory`) instead of a modal dialog, and navigation passes a proper `DataContext`
+- **Shutdown Safety**: Project service now guards async operations against disposal and cancels/terminates its executor more safely, logging a warning if shutdown times out
+- **File Chooser Compatibility**: File chooser descriptors for opening log and Docker Compose files are created in a way that works across supported IDE versions
+
+### Changed
+- Updated target IntelliJ Platform to 2025.2.1 and Gradle wrapper to 8.14.3
+- Updated dependencies to fix a package version conflict
+
 ## [1.0.1] - 2026-10-27
 
 ### Fixed

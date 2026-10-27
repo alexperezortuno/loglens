@@ -2,7 +2,7 @@
 <idea-plugin url="https://github.com/loglens/loglens" requireRestart="false">
     <id>cl.glign.tracelens</id>
     <name>TraceLens</name>
-    <version>1.0.1</version>
+    <version>1.0.2</version>
     <vendor>TraceLens</vendor>
     <description><![CDATA[
         A fast, offline-first log viewer for IntelliJ IDEA.
@@ -21,6 +21,13 @@
     <depends>com.intellij.java</depends>
 
     <change-notes><![CDATA[
+        <h3>1.0.2 — Navigation and Compatibility Fixes</h3>
+        <ul>
+            <li>Stack-frame navigation now shows a popup chooser when a frame matches several sources</li>
+            <li>Safer shutdown: background operations are guarded against project disposal</li>
+            <li>Improved file chooser compatibility across supported IntelliJ versions</li>
+            <li>Built against IntelliJ Platform 2025.2.1</li>
+        </ul>
         <h3>1.0.1 — Responsive Layout Fix</h3>
         <ul>
             <li>Fixed responsive resizing of the TraceLens windows: the log list and details panel now resize dynamically</li>

@@ -1,1 +1,1 @@
-rootProject.name = "loglens"
+rootProject.name = "tracelens"

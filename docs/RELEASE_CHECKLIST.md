@@ -1,4 +1,4 @@
-# LogLens 1.0.0 — Release Checklist
+# TraceLens 1.0.0 — Release Checklist
 
 ## Verification Results
 
@@ -7,8 +7,8 @@
 | Unit tests (clean build) | ✅ PASS | 119 tests passing on `feature/r-1.0` branch |
 | Plugin Verifier (IC-243, IC-251, IC-252) | ✅ PASS | 4 deprecated API usages (non-blocking) |
 | Plugin Verifier (IC-253) | ⚠️ PENDING | IntelliJ 2025.3 not yet released |
-| Plugin loads in sandbox | ✅ PASS | `Loaded custom plugins: LogLens (1.0.0)` |
-| No LogLens exceptions in IDE logs | ✅ PASS | Clean sandbox logs |
+| Plugin loads in sandbox | ✅ PASS | `Loaded custom plugins: TraceLens (1.0.0)` |
+| No TraceLens exceptions in IDE logs | ✅ PASS | Clean sandbox logs |
 | ZIP integrity | ✅ PASS | Valid ZIP, 3.3 MB |
 | SHA-256 checksum | ✅ PASS | `83138ffcd5dc156a126e211b40201790119eee39cfeb1a6ca920f572213736cb` |
 | No embedded credentials | ✅ PASS | Verified JAR contents |
@@ -67,9 +67,9 @@
 
 | Property | Value |
 |----------|-------|
-| Plugin ID | `io.loglens.plugin` |
+| Plugin ID | `cl.glign.tracelens` |
 | Version | `1.0.0` |
-| Artifact | `build/distributions/loglens-1.0.0.zip` |
+| Artifact | `build/distributions/tracelens-1.0.0.zip` |
 | Size | 3,304,027 bytes (3.3 MB) |
 | SHA-256 | `83138ffcd5dc156a126e211b40201790119eee39cfeb1a6ca920f572213736cb` |
 | License | Apache-2.0 (declared in `plugin.xml` via vendor/description) |

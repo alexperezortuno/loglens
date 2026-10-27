@@ -1,35 +1,35 @@
-# LogLens User Guide
+# TraceLens User Guide
 
 ## Opening Log Files
 
 ### Tool Window
 
-1. Open **View → Tool Windows → LogLens** (or press the LogLens icon in the bottom tool window bar)
+1. Open **View → Tool Windows → TraceLens** (or press the TraceLens icon in the bottom tool window bar)
 2. Click **Open Log File…** in the toolbar or press `Ctrl+Shift+O` (Windows/Linux) / `Cmd+Shift+O` (macOS)
 3. Select a `.log`, `.out`, or `.txt` file
 
 ### File Editor
 
-Double-click any `.log` or `.out` file in the Project tool window — it opens in the LogLens editor instead of the plain text editor.
+Double-click any `.log` or `.out` file in the Project tool window — it opens in the TraceLens editor instead of the plain text editor.
 
 ### Context Menu
 
-Right-click a log file in the Project view → **Open in LogLens**.
+Right-click a log file in the Project view → **Open in TraceLens**.
 
 ### Docker Integration
 
-- **Tools → LogLens → Open Docker Log…** — Select a running container
-- **Tools → LogLens → Open Docker Compose Log…** — Select a service from a `docker-compose.yml`
+- **Tools → TraceLens → Open Docker Log…** — Select a running container
+- **Tools → TraceLens → Open Docker Compose Log…** — Select a service from a `docker-compose.yml`
 
 ### Process Integration
 
-- **Tools → LogLens → Open Process Log…** — Enter a PID or command to follow a local process
+- **Tools → TraceLens → Open Process Log…** — Enter a PID or command to follow a local process
 
 ## The Viewer Layout
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ LogLens                                          [Toolbar]  │
+│ TraceLens                                          [Toolbar]  │
 ├─────────────────────────────────────────────────────────────┤
 │ Search: [_______________]  [Regex] [Match Case]             │
 │ [TRACE] [DEBUG] [INFO] [WARN] [ERROR] [FATAL] [UNKNOWN]     │
@@ -145,14 +145,14 @@ The **Statistics** tab shows:
 
 ## Local AI (Optional)
 
-Enable in **Settings → Tools → LogLens → AI**:
+Enable in **Settings → Tools → TraceLens → AI**:
 
 | Provider | Configuration |
 |----------|---------------|
 | Ollama | Base URL (default `http://localhost:11434`), Model |
 | OpenAI-compatible | Base URL, API Key, Model |
 
-Actions (right-click a record with an exception → **LogLens AI**):
+Actions (right-click a record with an exception → **TraceLens AI**):
 - **Explain Error** — Plain-language explanation
 - **Summarize Exception** — Concise summary
 - **Find Probable Cause** — Likely root cause
@@ -189,7 +189,7 @@ Oversized records show a truncated preview; the remainder is skipped in cancella
 
 ## Settings
 
-**Settings → Tools → LogLens**
+**Settings → Tools → TraceLens**
 
 | Setting | Description |
 |---------|-------------|
@@ -220,4 +220,4 @@ LogLens registers for:
 - `*.out`
 - `*.txt` (opens in tool window, not editor)
 
-To change associations: **Settings → Editor → File Types → LogLens Log File**.
+To change associations: **Settings → Editor → File Types → TraceLens Log File**.

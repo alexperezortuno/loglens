@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to LogLens are documented in this file.
+All notable changes to TraceLens are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **ANSI Support**: SGR color/background/style parsing and rendering in viewer
 - **Stack Trace Handling**: Detection, assembly across page boundaries, frame parsing with causes/suppressed
 - **Source Navigation**: Clickable stack frames opening project sources at exact line
-- **Tool Window**: Dedicated LogLens tool window with compact record feed and detail pane
+- **Tool Window**: Dedicated TraceLens tool window with compact record feed and detail pane
 - **File Editor**: ANSI-aware editor for `.log` and `.out` files on double-click
 - **Level Filtering**: Independent toggle for each level (OR semantics)
 - **Search**: Plain text, case-sensitive, and regex modes; composable with filters
@@ -51,7 +51,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - IntelliJ Platform project foundation
-- LogLens Tool Window with level filter toggles
+- TraceLens Tool Window with level filter toggles
 - Plain-text, Spring Boot, timestamp-level, JSON Lines parsers
 - ANSI SGR color rendering
 - Compact log feed with message/raw details
@@ -86,5 +86,5 @@ Parser API version tracked separately in `ParserApi` object.
 ## Links
 
 - [GitHub Releases](https://github.com/loglens/loglens/releases)
-- [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/XXXXXX-loglens)
+- [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/XXXXXX-tracelens)
 - [Issues](https://github.com/loglens/loglens/issues)

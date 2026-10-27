@@ -1,4 +1,4 @@
-# LogLens Roadmap
+# TraceLens Roadmap
 
 ## 0.1 — MVP
 
@@ -12,7 +12,7 @@ Goal:
 - [x] Kotlin
 - [x] Gradle Kotlin DSL
 - [x] `plugin.xml`
-- [x] LogLens Tool Window
+- [x] TraceLens Tool Window
 - [x] Basic plugin icon
 - [x] Plugin settings skeleton
 
@@ -80,7 +80,7 @@ Given:
 application.log
 ```
 
-the user can open LogLens and:
+the user can open TraceLens and:
 
 ```text
 view logs
@@ -127,7 +127,7 @@ Goal:
 
 Goal:
 
-> Make LogLens practical for daily development.
+> Make TraceLens practical for daily development.
 
 ### Formats
 

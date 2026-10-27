@@ -1,8 +1,8 @@
-# LogLens Parser API
+# TraceLens Parser API
 
 ## Overview
 
-LogLens uses a parser registry to route log lines to format-specific parsers. The API is designed for extensibility — plugins and applications can register custom parsers without modifying core code.
+TraceLens uses a parser registry to route log lines to format-specific parsers. The API is designed for extensibility — plugins and applications can register custom parsers without modifying core code.
 
 ## Versioning
 
@@ -281,8 +281,8 @@ println(entry.level) // INFO
 
 ## Version Compatibility Matrix
 
-| LogLens Version | ParserApi Version | Compatible With |
-|-----------------|-------------------|-----------------|
+| TraceLens Version | ParserApi Version | Compatible With |
+|-------------------|-------------------|-----------------|
 | 1.0.x | 1.0 | 1.0.x |
 | 1.1.x | 1.0 | 1.0.x, 1.1.x |
 | 2.0.x | 2.0 | 2.0.x only (breaking) |

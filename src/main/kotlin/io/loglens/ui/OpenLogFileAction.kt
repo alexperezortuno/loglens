@@ -4,8 +4,8 @@ import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.fileChooser.FileChooser
 import com.intellij.openapi.fileChooser.FileChooserDescriptor
-import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
 import com.intellij.openapi.wm.ToolWindowManager
+import io.loglens.compat.FileChooserDescriptorFactoryCompat
 import io.loglens.service.LogLensProjectService
 
 /**
@@ -16,7 +16,7 @@ class OpenLogFileAction : AnAction() {
 
     override fun actionPerformed(event: AnActionEvent) {
         val project = event.project ?: return
-        val descriptor = createSingleFileDescriptor()
+        val descriptor = FileChooserDescriptorFactoryCompat.createSingleFileDescriptor()
             .withFileFilter { vf ->
                 val name = vf.name.lowercase()
                 name.endsWith(".log") || name.endsWith(".out") || name.endsWith(".txt")
@@ -34,16 +34,5 @@ class OpenLogFileAction : AnAction() {
         templatePresentation.icon = io.loglens.icons.LogLensIcons.TOOL_WINDOW
         templatePresentation.text = "Open Log File…"
         templatePresentation.description = "Open a log file in LogLens"
-    }
-
-    private fun createSingleFileDescriptor(): FileChooserDescriptor {
-        return try {
-            // FileChooserDescriptorFactory.singleFile() added in 2025.2 (IC-252)
-            FileChooserDescriptorFactory::class.java.getMethod("singleFile").invoke(null) as FileChooserDescriptor
-        } catch (_: Exception) {
-            // Fallback for 2024.3 (IC-243) and 2025.1 (IC-251)
-            @Suppress("DEPRECATION")
-            FileChooserDescriptorFactory.createSingleFileDescriptor()
-        }
     }
 }

@@ -2,7 +2,8 @@ package io.loglens.navigation
 
 import com.intellij.ide.DataManager
 import com.intellij.openapi.actionSystem.DataContext
-import com.intellij.openapi.application.ReadAction
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.util.Computable
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.ProjectFileIndex
@@ -32,11 +33,11 @@ object StackFrameNavigator {
 
     fun navigate(project: Project, frame: StackFrame, dataContext: DataContext) {
         val fileName = frame.fileName ?: return
-        val candidates = ReadAction.compute<List<VirtualFile>, RuntimeException> { 
+        val candidates = ApplicationManager.getApplication().runReadAction(Computable<List<VirtualFile>> { 
             FilenameIndex.getVirtualFilesByName(fileName, GlobalSearchScope.projectScope(project))
                 .filter { ProjectFileIndex.getInstance(project).isInContent(it) }
                 .toList()
-        }
+        })
         val ranked = rankCandidates(frame.declaringClass, fileName, candidates)
         when (ranked.size) {
             0 -> Messages.showInfoMessage(

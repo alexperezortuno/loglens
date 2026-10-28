@@ -1,6 +1,7 @@
 package io.loglens.ui
 
 import com.intellij.ide.DataManager
+import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.fileEditor.FileEditor
 import com.intellij.openapi.fileEditor.FileEditorState
 import com.intellij.openapi.fileEditor.FileEditorStateLevel
@@ -13,6 +14,7 @@ import io.loglens.navigation.StackFrameNavigator
 import java.awt.BorderLayout
 import java.beans.PropertyChangeListener
 import java.nio.file.Path
+import java.util.concurrent.CompletableFuture
 import javax.swing.JComponent
 import javax.swing.JPanel
 
@@ -39,7 +41,8 @@ class LogLensFileEditor(
         viewer.setCancelLoadAction(service::cancelLoad)
         viewer.setTailAction(service::toggleTailing)
         viewer.setStackFrameNavigationHandler { frame, _ ->
-            val dataContext = DataManager.getInstance().getDataContext(root)
+            val future = DataManager.getInstance().getDataContextFromFocusAsync() as CompletableFuture<DataContext>
+            val dataContext = future.get() ?: return@setStackFrameNavigationHandler
             StackFrameNavigator.navigate(project, frame, dataContext)
         }
         service.addListener(snapshotListener)

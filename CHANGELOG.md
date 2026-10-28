@@ -5,6 +5,14 @@ All notable changes to TraceLens are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.3] - 2026-10-27
+
+### Added
+- **Error Reporting**: Plugin errors can now be reported through the JetBrains Marketplace error handler (`JetBrainsMarketplaceErrorReportSubmitter`)
+
+### Changed
+- Updated Gradle wrapper to 8.14.5 and refreshed wrapper scripts (`gradlew`, `gradlew.bat`)
+
 ## [1.0.2] - 2026-10-27
 
 ### Fixed

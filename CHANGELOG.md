@@ -5,6 +5,13 @@ All notable changes to TraceLens are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.4] - 2026-10-27
+
+### Changed
+- Removed usages of deprecated IntelliJ Platform APIs
+- Added `FileChooserDescriptorFactoryCompat` so file chooser descriptors are created without deprecated methods while staying compatible with IntelliJ 2024.3+ (used by `OpenLogFileAction` and `OpenDockerComposeLogAction`)
+- `StackFrameNavigator`, `LogLensFileEditor` and `LogLensToolWindowContent` now obtain the data context asynchronously (`getDataContextFromFocusAsync`)
+
 ## [1.0.3] - 2026-10-27
 
 ### Added

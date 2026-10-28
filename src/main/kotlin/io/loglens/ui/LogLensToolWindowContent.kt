@@ -1,6 +1,7 @@
 package io.loglens.ui
 
 import com.intellij.ide.DataManager
+import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.project.Project
 import com.intellij.ui.JBSplitter
 import com.intellij.ui.components.JBPanel
@@ -9,6 +10,7 @@ import io.loglens.service.LogLensProjectService
 import io.loglens.settings.LogLensSettings
 import java.awt.BorderLayout
 import java.awt.FlowLayout
+import java.util.concurrent.CompletableFuture
 import javax.swing.JButton
 import javax.swing.JPanel
 
@@ -95,7 +97,8 @@ val buttonPanel = JPanel(FlowLayout(FlowLayout.RIGHT, 4, 0)).apply {
         viewer.setCancelLoadAction(service::cancelLoad)
         viewer.setTailAction(service::toggleTailing)
         viewer.setStackFrameNavigationHandler { frame, _ ->
-            val dataContext = DataManager.getInstance().getDataContext(component)
+            val future = DataManager.getInstance().getDataContextFromFocusAsync() as CompletableFuture<DataContext>
+            val dataContext = future.get() ?: return@setStackFrameNavigationHandler
             StackFrameNavigator.navigate(project, frame, dataContext)
         }
         // Apply current snapshot immediately in case the project already had one.

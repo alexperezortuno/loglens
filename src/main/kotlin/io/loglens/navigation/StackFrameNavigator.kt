@@ -18,20 +18,21 @@ import com.intellij.openapi.wm.WindowManager
 import com.intellij.psi.search.FilenameIndex
 import com.intellij.psi.search.GlobalSearchScope
 import io.loglens.model.StackFrame
+import java.util.concurrent.CompletableFuture
 import javax.swing.Icon
 
 /** Resolves Java/Kotlin stack frames to project files and navigates to their source lines. */
 object StackFrameNavigator {
 
     fun navigate(project: Project, frame: StackFrame) {
-        val frameComponent = WindowManager.getInstance().getFrame(project)
-        val dataContext = if (frameComponent != null) DataManager.getInstance().getDataContext(frameComponent) else DataManager.getInstance().getDataContextFromFocusAsync().blockingGet(1000) ?: DataManager.getInstance().dataContext
+        val future = DataManager.getInstance().getDataContextFromFocusAsync() as CompletableFuture<DataContext>
+        val dataContext = future.get()
         navigate(project, frame, dataContext)
     }
 
     fun navigate(project: Project, frame: StackFrame, dataContext: DataContext) {
         val fileName = frame.fileName ?: return
-        val candidates = ReadAction.compute<List<VirtualFile>, RuntimeException> {
+        val candidates = ReadAction.compute<List<VirtualFile>, RuntimeException> { 
             FilenameIndex.getVirtualFilesByName(fileName, GlobalSearchScope.projectScope(project))
                 .filter { ProjectFileIndex.getInstance(project).isInContent(it) }
                 .toList()

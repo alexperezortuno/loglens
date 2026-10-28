@@ -2,7 +2,7 @@
 <idea-plugin url="https://github.com/loglens/loglens" requireRestart="false">
     <id>cl.glign.tracelens</id>
     <name>TraceLens</name>
-    <version>1.0.3</version>
+    <version>1.0.4</version>
     <vendor>TraceLens</vendor>
     <description><![CDATA[
         A fast, offline-first log viewer for IntelliJ IDEA.
@@ -21,6 +21,12 @@
     <depends>com.intellij.java</depends>
 
     <change-notes><![CDATA[
+        <h3>1.0.4 — Deprecated API Cleanup</h3>
+        <ul>
+            <li>Removed usages of deprecated IntelliJ Platform APIs for better forward compatibility</li>
+            <li>File chooser dialogs now use a compatibility layer that works across supported IDE versions</li>
+            <li>Stack-frame navigation retrieves its data context asynchronously</li>
+        </ul>
         <h3>1.0.3 — Error Reporting and Build Updates</h3>
         <ul>
             <li>Errors can now be reported to the JetBrains Marketplace directly from the IDE</li>

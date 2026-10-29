@@ -218,7 +218,7 @@ Edit `gradle.properties`:
 ```properties
 platformVersion=2025.2.1
 pluginSinceBuild=243
-pluginUntilBuild=253.*
+pluginUntilBuild=263.*
 ```
 
 Then:

@@ -64,10 +64,10 @@ Open `.log`, `.out` and `.txt` files in TraceLens with level filtering, plain-te
 
 | IDE | Since Build | Until Build |
 |-----|-------------|-------------|
-| IntelliJ IDEA Community | 2024.3 (243) | 2025.3 (253.*) |
-| IntelliJ IDEA Ultimate | 2024.3 (243) | 2025.3 (253.*) |
-| Android Studio | 2024.3 (243) | 2025.3 (253.*) |
-| Other IntelliJ Platform IDEs | 2024.3 (243) | 2025.3 (253.*) |
+| IntelliJ IDEA Community | 2024.3 (243) | 2026.3 (263.*) |
+| IntelliJ IDEA Ultimate | 2024.3 (243) | 2026.3 (263.*) |
+| Android Studio | 2024.3 (243) | 2026.3 (263.*) |
+| Other IntelliJ Platform IDEs | 2024.3 (243) | 2026.3 (263.*) |
 
 Verified with IntelliJ Plugin Verifier against IC-2024.3, IC-2025.1, IC-2025.2.
 

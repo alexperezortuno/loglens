@@ -2,7 +2,7 @@
 <idea-plugin url="https://github.com/loglens/loglens" requireRestart="false">
     <id>cl.glign.tracelens</id>
     <name>TraceLens</name>
-    <version>1.0.5</version>
+    <version>1.0.6</version>
     <vendor>TraceLens</vendor>
     <description><![CDATA[
         A fast, offline-first log viewer for IntelliJ IDEA.

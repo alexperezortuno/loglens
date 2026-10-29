@@ -14,13 +14,17 @@
         See SPEC.md and ROADMAP.md for the planned feature set.
     ]]></description>
 
-    <!-- IntelliJ Platform 2024.3 (build 243) through 2025.3 (build 253.*) -->
-    <idea-version since-build="243" until-build="253.*" />
+    <!-- IntelliJ Platform 2024.3 (build 243) through 2026.3 (build 263.*) -->
+    <idea-version since-build="243" until-build="263.*" />
 
     <depends>com.intellij.modules.platform</depends>
     <depends>com.intellij.java</depends>
 
     <change-notes><![CDATA[
+        <h3>1.0.6 — Increase BuildNumber IDE</h3>
+        <ul>
+            <li>Build number increased to maxinimum version to support IntelliJ IDEA 2026.2.3.</li>
+        </ul>
         <h3>1.0.5 — Navigation Thread-Safety Fix</h3>
         <ul>
             <li>Stack-frame navigation now performs its source lookup inside an application read action for thread safety</li>
